@@ -21,7 +21,7 @@ function density_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64
     Ψtensor = zeros(Float64, ntuple(x -> 2 * N, n))
     basis1body = 1:2*N
     combBasis = collect(combinations(basis1body, n))
-    # computate the permutations and paritiy
+    # compute the permutations and paritiy
     v = 1:n
     p = collect(permutations(v))[:]
     ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]

@@ -5,11 +5,11 @@ using LinearAlgebra
 using SchrodingerFE
 using SparseArrays
 
-ne = 2; # Nb of particles
+ne = 1; # Nb of particles
 Lx = 5.0; #x interval length 
 Ly = 4.0; #y interval length 
-Nx = 15; #Nb of discretization points of the interval [-Lx,Lx]
-Ny = 14; #Nb of discretization points of the interval [-Ly,Ly]
+Nx = 20; #Nb of discretization points of the interval [-Lx,Lx]
+Ny = 20; #Nb of discretization points of the interval [-Ly,Ly]
 L = [Lx, Ly]
 N = [Nx, Ny]
 α = 1. #parameter in the Laplace operator
@@ -33,9 +33,9 @@ vext(x , y) = -(1.0 ./ sqrt.((x - a[1]) .^ 2
 # vext(x, y) = b * (x .^ 2 .+ y .^ 2)
 
 # Electron-electron interaction
-vee(x, y) = 1 / sqrt(1e-10 + x^2 + y^2)
+vee(x, y) = 1 / sqrt(x^2 + y^2)
 
-ham = ham2d(L, N; alpha_lap=α, vext, vee);
+ham = ham2d(L, N; alpha_lap=α, vext, vee, nx1=4, ny1=4, nx2=3, ny2=3);
 
 # Solve the eigenvalue problem
 E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, "FCI_full"; maxiter=50, kdim=50)

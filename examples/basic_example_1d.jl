@@ -25,10 +25,10 @@ vext(x) = -(1.0 ./ sqrt.((x - a) .^ 2 .+ 1)
 vee(x) = 1.0 ./ sqrt.(x .^ 2 .+ 1)
 
 # For P1 Finite Elements
-# ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
+ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
 
 # For P2 Finite Elements 
-ham = ham1d(L, N; vext, vee, nx=4, ny=4, element="P2");
+# ham = ham1d(L, N; vext, vee, nx=4, ny=4, element="P2");
 
 
 # Solve the eigenvalue problem with different methods
