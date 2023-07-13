@@ -25,52 +25,61 @@ function density_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64
     v = 1:n
     p = collect(permutations(v))[:]
     ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
-    # reshape the vector Ψ to the (antisymmetric) tensor
-    for j = 1:length(combBasis)
-        ij = combBasis[j]
-        for k = 1:length(p)
-            ik = seq2num_ns(2N, n, ij[p[k]])
-            Ψtensor[ik] = Ψ[j] * ε[k]
-        end
-    end
+    
     # integrate the n-1 variable out to obtain the coefficients of ρ
-    mass = overlap(n - 1, C)
     indrow = [1:N; 1:N-1; 2:N]
     indcol = [1:N; 2:N; 1:N-1]
     val = zeros(Float64, 3 * N - 2)
-    for k = 1:2*N
-        sptr = zeros(Int, n - 1, 1)
-        for s = 1:2^(n-1)
-            sp = sptr * N
-            uk = getindex(Ψtensor, k, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-            ukvec = reshape(uk, N^(n - 1), 1)[:]
-            if k <= N
-                val[k] += dot(ukvec, mass, ukvec)
-            else
-                val[k-N] += dot(ukvec, mass, ukvec)
+
+    if n == 1
+        @. val[1:N] = Ψ[1:N]^2 +  Ψ[N+1:2N]^2
+        @. val[N+1:2N-1] = Ψ[1:N-1] * Ψ[2:N] + Ψ[N+1:2N-1] * Ψ[N+2:2N]
+        @. val[2N:3N-2] = Ψ[1:N-1] * Ψ[2:N] + Ψ[N+1:2N-1] * Ψ[N+2:2N]
+    else 
+        # reshape the vector Ψ to the (antisymmetric) tensor
+        for j = 1:length(combBasis)
+            ij = combBasis[j]
+            for k = 1:length(p)
+                ik = seq2num_ns(2N, n, ij[p[k]])
+                Ψtensor[ik] = Ψ[j] * ε[k]
             end
-            if k < N
-                uk_right = getindex(Ψtensor, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-                ukvec_right = reshape(uk_right, N^(n - 1), 1)[:]
-                val[N+k] += dot(ukvec, mass, ukvec_right)
-                val[2*N+k-1] += dot(ukvec, mass, ukvec_right)
-            end
-            if k > N && k < 2 * N
-                uk_right = getindex(Ψtensor, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-                ukvec_right = reshape(uk_right, N^(n - 1), 1)[:]
-                val[k] += dot(ukvec, mass, ukvec_right)
-                val[N+k-1] += dot(ukvec, mass, ukvec_right)
-            end
-            # adjust sptr
-            sptr[1] += 1
-            if n >= 3
-                for ℓ = 1:n-2
-                    if sptr[ℓ] == 2
-                        sptr[ℓ] = 0
-                        sptr[ℓ+1] += 1
-                    end
+        end
+
+        mass = overlap(n - 1, C)
+        for k = 1:2*N
+            sptr = zeros(Int, n - 1, 1)
+            for s = 1:2^(n-1)
+                sp = sptr * N
+                uk = getindex(Ψtensor, k, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
+                ukvec = reshape(uk, N^(n - 1), 1)[:]
+                if k <= N
+                    val[k] += dot(ukvec, mass, ukvec)
+                else
+                    val[k-N] += dot(ukvec, mass, ukvec)
                 end
-            end # end if
+                if k < N
+                    uk_right = getindex(Ψtensor, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
+                    ukvec_right = reshape(uk_right, N^(n - 1), 1)[:]
+                    val[N+k] += dot(ukvec, mass, ukvec_right)
+                    val[2*N+k-1] += dot(ukvec, mass, ukvec_right)
+                end
+                if k > N && k < 2 * N
+                    uk_right = getindex(Ψtensor, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
+                    ukvec_right = reshape(uk_right, N^(n - 1), 1)[:]
+                    val[k] += dot(ukvec, mass, ukvec_right)
+                    val[N+k-1] += dot(ukvec, mass, ukvec_right)
+                end
+                # adjust sptr
+                sptr[1] += 1
+                if n >= 3
+                    for ℓ = 1:n-2
+                        if sptr[ℓ] == 2
+                            sptr[ℓ] = 0
+                            sptr[ℓ+1] += 1
+                        end
+                    end
+                end # end if
+            end
         end
     end
     ρcoef = sparse(indrow, indcol, val)
