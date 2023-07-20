@@ -2,10 +2,10 @@ using SchrodingerFE
 using LinearAlgebra
 using Plots
 
-ne = 1 # Nb of particles
+ne = 3 # Nb of particles
 
 L = 10.0; #Interval length
-N = 2; #Nb of discretization points of the interval [-L,L]
+N = 15; #Nb of discretization points of the interval [-L,L]
 α = 1.0 #parameter in the laplace operator
 
 norb = N - 1
@@ -27,9 +27,10 @@ vee(x) = 0.
 # For P1 Finite Elements
 ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
 
-Hamglobal = hamiltonian(1, ham)
-Matrix(Hamglobal[1])
-Matrix(Hamglobal[2])
+Hamglobal = hamiltonian(ne, ham)
+@show Matrix(Hamglobal[1])
+@show Matrix(Hamglobal[2])
+
 
 E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, "FCI_full"; maxiter=50, kdim=50)
 # plot(density(wf_FCIfull,ham))
@@ -73,11 +74,10 @@ end
 
 ham_on = ham1d(ham.L,ham.N,hamAΔ2,hamAV2,C_on,ham2B,ham.alpha_lap,ham.vext,ham.vee,ham.element)
 
-Hamglobal_on = hamiltonian(1, ham_on)
-Matrix(Hamglobal_on[1])
+Hamglobal_on = hamiltonian(ne, ham_on)
+@show Matrix(Hamglobal_on[1])
 @show Matrix(Hamglobal_on[2])
 
 E_FCIfull2, wf_FCIfull2 = WaveFunction(ne, ham_on, "FCI_full"; maxiter=50, kdim=50)
-plot!(density(wf_FCIfull2, ham_on))
 
 @show (E_FCIfull2 - E_FCIfull)
