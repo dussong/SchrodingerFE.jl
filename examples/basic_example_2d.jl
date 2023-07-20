@@ -8,8 +8,8 @@ using SparseArrays
 ne = 1; # Nb of particles
 Lx = 5.0; #x interval length 
 Ly = 4.0; #y interval length 
-Nx = 20; #Nb of discretization points of the interval [-Lx,Lx]
-Ny = 20; #Nb of discretization points of the interval [-Ly,Ly]
+Nx = 50; #Nb of discretization points of the interval [-Lx,Lx]
+Ny = 50; #Nb of discretization points of the interval [-Ly,Ly]
 L = [Lx, Ly]
 N = [Nx, Ny]
 α = 1. #parameter in the Laplace operator

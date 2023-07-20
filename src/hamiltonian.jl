@@ -90,93 +90,132 @@ export hamiltonian
 
 
 function hamiltonian(ne::Int, combBasis::Array{Array{T,1},1},
-    AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
-    C::SparseMatrixCSC{Float64,Int64},
-    B::Array{Float64,4}; alpha_lap=1.0) where {T<:Signed}
+   AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
+   C::SparseMatrixCSC{Float64,Int64},
+   B::Array{Float64,4}; alpha_lap=1.0) where {T<:Signed}
 
-    N = C.n
-    # initialize the sparse array
-    indrow2body = Int64[]
-    indcol2body = Int64[]
-    valH = Float64[]
-    valM = Float64[]
+   N = C.n #nb of electrons
 
-    # computate the permutations and paritiy
-    v = 1:ne
-    p = collect(permutations(v))[:]
-    ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
-    # collect the pairs for Coulomb interactions
-    coulomb_which2 = collect(combinations(v, 2))
+   # initialize the sparse array
+   indrow2body = Int64[]
+   indcol2body = Int64[]
+   valH = Float64[]
+   valM = Float64[]
 
-    index = tensor2vec(ne, N, combBasis)
+   # computate the permutations and paritiy
+   v = 1:ne
+   p = collect(permutations(v))[:]
+   ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
+   # collect the pairs for Coulomb interactions
+   coulomb_which2 = collect(combinations(v, 2))
 
-    i = zeros(Int, ne)
-    s = zeros(Int, ne)
-    j = zeros(Int, ne)
-    t = zeros(Int, ne)
-    jp = zeros(Int, ne)
-    tj = zeros(Int, ne)
-    jptr = zeros(Int64, ne)
-    pk = zeros(Int, ne)
-    jn = (2N) .^ collect(0:ne-1)
+   index = tensor2vec(ne, N, combBasis)
+   @show index
 
-    # loop for the matrix elements
-    for count = 1:length(combBasis)
-        si = combBasis[count]
-        for l in 1:ne
-            i[l] = si[l] > N ? si[l] - N : si[l]
-            s[l] = si[l] > N ? 1 : 0
-        end
-        @. jptr = 0
-        while jptr[ne] < C.colptr[i[ne]+1] - C.colptr[i[ne]]
-            Cv = 1.0
-            Av = 0.0
+   i = zeros(Int, ne)
+   s = zeros(Int, ne)
+   j = zeros(Int, ne)
+   t = zeros(Int, ne)
+   jp = zeros(Int, ne)
+   tj = zeros(Int, ne)
+   jptr = zeros(Int64, ne)
+   pk = zeros(Int, ne)
+   jn = (2N) .^ collect(0:ne-1)
+
+
+   # loop for the matrix elements
+   for (count,si) in enumerate(combBasis)
+      for l in 1:ne
+         i[l] = si[l] > N ? si[l] - N : si[l]
+         s[l] = si[l] > N ? 1 : 0
+      end
+
+      # # Compute the elements for the overlap matrix
+      # @. jptr = 0
+      # while jptr[ne] < C.colptr[i[ne]+1] - C.colptr[i[ne]]
+      #    Cv = 1.0
+      #    for l in 1:ne
+      #       j[l] = C.rowval[C.colptr[i[l]]+jptr[l]]
+      #       Cv *= C[i[l], j[l]]
+      #    end
+
+      #    for (k,pk) in enumerate(p)
+      #          for l in 1:ne
+      #             t[l] = s[pk[l]]
+      #             jp[l] = j[pk[l]]
+      #             tj[l] = jp[l] + N * t[l] - 1
+      #          end
+      #          tj1 = dot(tj, jn) + 1
+      #          ζ = index[tj1]
+      #          if ζ > 0
+      #             push!(indrow2body, count)
+      #             push!(indcol2body, ζ)
+      #             push!(valM, ε[k] * Cv)
+      #             push!(valH, ε[k] * Cv)
+      #          end # end issorted(tj)
+      #    end # end loop through permutation
+
+      #    # adjust jptr
+      #    jptr[1] += 1
+      #    for ℓ = 1:ne-1
+      #          if jptr[ℓ] == C.colptr[i[ℓ]+1] - C.colptr[i[ℓ]]
+      #             jptr[ℓ] = 0
+      #             jptr[ℓ+1] += 1
+      #          end
+      #    end
+      #    @show jptr
+      # end # end while loop for jptr for overlap matrix M
+
+      @. jptr = 0
+      while jptr[ne] < C.colptr[i[ne]+1] - C.colptr[i[ne]]
+         Cv = 1.0
+         Av = 0.0
+         for l in 1:ne
+            j[l] = C.rowval[C.colptr[i[l]]+jptr[l]]
+            Cv *= C[i[l], j[l]]
+            Av += (0.5 * alpha_lap * AΔ[i[l], j[l]] + AV[i[l], j[l]]) / C[i[l], j[l]]
+         end
+         Av *= Cv
+
+         Bv = 0.0
+         for l = 1:length(coulomb_which2)
+            ca = coulomb_which2[l][1]
+            cb = coulomb_which2[l][2]
+            Bv += Cv * B[i[ca], i[cb], j[ca], j[cb]] /
+                  (C[i[ca], j[ca]] * C[i[cb], j[cb]])
+         end
+
+         for k = 1:length(p)
+            @views pk = p[k]
             for l in 1:ne
-                j[l] = C.rowval[C.colptr[i[l]]+jptr[l]]
-                Cv *= C[i[l], j[l]]
-                Av += (0.5 * alpha_lap * AΔ[i[l], j[l]] + AV[i[l], j[l]]) / C[i[l], j[l]]
+               t[l] = s[pk[l]]
+               jp[l] = j[pk[l]]
+               tj[l] = jp[l] + N * t[l] - 1
             end
-            Av *= Cv
+            tj1 = dot(tj, jn) + 1
+            ζ = index[tj1]
+            if ζ > 0
+               push!(indrow2body, count)
+               push!(indcol2body, ζ)
+               push!(valH, ε[k] * (Av + Bv))
+               push!(valM, ε[k] * Cv)
+            end # end issorted(tj)
+         end # end loop through permutation
 
-            Bv = 0.0
-            for l = 1:length(coulomb_which2)
-                ca = coulomb_which2[l][1]
-                cb = coulomb_which2[l][2]
-                Bv += Cv * B[i[ca], i[cb], j[ca], j[cb]] /
-                      (C[i[ca], j[ca]] * C[i[cb], j[cb]])
+         # adjust jptr
+         jptr[1] += 1
+         for ℓ = 1:ne-1
+            if jptr[ℓ] == C.colptr[i[ℓ]+1] - C.colptr[i[ℓ]]
+               jptr[ℓ] = 0
+               jptr[ℓ+1] += 1
             end
+         end
+      end # end while loop for jptr
+   end # end loop for combBasis
 
-            for k = 1:length(p)
-                @views pk = p[k]
-                for l in 1:ne
-                    t[l] = s[pk[l]]
-                    jp[l] = j[pk[l]]
-                    tj[l] = jp[l] + N * t[l] - 1
-                end
-                tj1 = dot(tj, jn) + 1
-                ζ = index[tj1]
-                if ζ > 0
-                    push!(indrow2body, count)
-                    push!(indcol2body, ζ)
-                    push!(valH, ε[k] * (Av + Bv))
-                    push!(valM, ε[k] * Cv)
-                end # end issorted(tj)
-            end # end loop through permutation
-
-            # adjust jptr
-            jptr[1] += 1
-            for ℓ = 1:ne-1
-                if jptr[ℓ] == C.colptr[i[ℓ]+1] - C.colptr[i[ℓ]]
-                    jptr[ℓ] = 0
-                    jptr[ℓ+1] += 1
-                end
-            end
-        end # end while loop for jptr
-    end # end loop for combBasis
-
-    H = sparse(indrow2body, indcol2body, valH)
-    M = sparse(indrow2body, indcol2body, valM)
-    return (H + H') / 2, M
+   H = sparse(indrow2body, indcol2body, valH)
+   M = sparse(indrow2body, indcol2body, valM)
+   return (H + H') / 2, M
 end
 
 function hamiltonian(ne::Int, combBasis::Array{Array{T,1},1},
