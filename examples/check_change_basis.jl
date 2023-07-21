@@ -5,14 +5,14 @@ ne = 4 # Nb of particles
 
 L = 10.0; #Interval length
 N = 5; #Nb of discretization points of the interval [-L,L]
-α = 0. #parameter in the laplace operator
+α = 1. #parameter in the laplace operator
 
 norb = N - 1
 
 # External potential
 a = 1.0
 b = -1.0
-vext(x) = x.^2
+vext(x) = 0.
 
 # -(1.0 ./ sqrt.((x - a) .^ 2 .+ 1)
 #             .+
