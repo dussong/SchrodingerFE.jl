@@ -96,34 +96,26 @@ function hamiltonian(ne::Int, combBasis::Array{Array{T,1},1},
 
    H = spzeros(length(combBasis), length(combBasis))
    M = spzeros(length(combBasis), length(combBasis))
-
    N = C.n #nb of electrons
+   index = tensor2vec(ne, N, combBasis)
+   jn = (2N) .^ collect(0:ne-1)
 
    # group together Laplace + One-body potential
    A = 0.5 * alpha_lap * AΔ + AV
    # Generate matrix with maximum support
-   D = abs.(AΔ) + abs.(AV) + abs.(C)
-   # compute the permutations and paritiy
-   v = 1:ne
-   p = collect(permutations(v))[:]
-   ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
+   D = abs.(A) + abs.(C)
+   # compute the permutations and parity
+   p = collect(permutations(1:ne))[:]
+   ε = (-1) .^ parity.(p)
    # collect the pairs for Coulomb interactions
-   coulomb_which2 = collect(combinations(v, 2))
+   coulomb_which2 = collect(combinations(1:ne, 2))
 
-   index = tensor2vec(ne, N, combBasis)
-
-   i = zeros(Int, ne)
-   s = zeros(Int, ne)
-   j = zeros(Int, ne)
-   t = zeros(Int, ne)
-   jp = zeros(Int, ne)
-   tj = zeros(Int, ne)
+   # preallocate memory
+   i, s, j = zeros(Int, ne), zeros(Int, ne), zeros(Int, ne)
    jptr = zeros(Int64, ne)
-   jn = (2N) .^ collect(0:ne-1)
    Ck = zeros(Float64, ne)
 
    # loop for the matrix elements
-   @show combBasis
    for (count,si) in enumerate(combBasis)
       for l in 1:ne
          i[l] = si[l] > N ? si[l] - N : si[l] #index
@@ -137,10 +129,7 @@ function hamiltonian(ne::Int, combBasis::Array{Array{T,1},1},
             Ck[l] = C[i[l], j[l]]
          end
          Cv = prod(Ck[l] for l in 1:ne)
-         Av = 0.
-         for l in 1:ne
-            Av += A[i[l], j[l]] * prod(Ck[1:end .!=l])
-         end
+         Av = sum(A[i[l], j[l]] * prod(Ck[1:end .!=l]) for l in 1:ne)
 
          Bv = 0.0
          # for (ca,cb) in coulomb_which2
@@ -149,17 +138,12 @@ function hamiltonian(ne::Int, combBasis::Array{Array{T,1},1},
          # end
 
          for (k,pk) in enumerate(p)
-            for l in 1:ne
-               t[l] = s[pk[l]]
-               jp[l] = j[pk[l]]
-               tj[l] = jp[l] + N * t[l] - 1
-            end
-            tj1 = dot(tj, jn) + 1
-            ζ = index[tj1]
+            tj = 1 + sum((j[pk[l]] + N * s[pk[l]] - 1)*jn[l] for l in 1:ne)
+            ζ = index[tj]
             if ζ > 0
                H[count, ζ] = ε[k] * (Av + Bv)
                M[count, ζ] = ε[k] * Cv
-            end # end issorted(tj)
+            end
          end # end loop through permutation
 
          # adjust jptr
