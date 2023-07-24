@@ -69,7 +69,7 @@ Ej, Ψj = eigs(HΔ, M, nev = 1, which=:SM)
 ham = ham1d(L, N)
 
 x = collect(range(-L,L,length=N+1))[2:end-1]
-ρj = density(x,2, real(Ψj[:,1]), ham)
+ρj = SchrodingerFE.density(x,2, real(Ψj[:,1]), ham)
 ρj = (ρj * N * 2) / (norm(ρj, 1) * 2L);
 
 ρ2j = pair_density(hcat(x,x), L, 2,  real(Ψj[:,1]), ham.C)
