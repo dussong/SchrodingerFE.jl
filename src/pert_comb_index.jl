@@ -88,7 +88,6 @@ function num2seq!(seq::Vector{Int64},m::Int64,n::Int64,num::Int64)
 end
 
 function seq2num_ns(m::Int64,n::Int64,seq::Vector{Int64})
-
     num = seq[1]
     for i = 2 : n
         num += (seq[i]-1) * m^(i-1)

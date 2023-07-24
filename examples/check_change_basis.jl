@@ -12,16 +12,16 @@ norb = N - 1
 # External potential
 a = 1.0
 b = -1.0
-vext(x) = 0.
+# vext(x) = 0.
 
-# -(1.0 ./ sqrt.((x - a) .^ 2 .+ 1)
-#             .+
-#             1.0 ./ sqrt.((x - b) .^ 2 .+ 1)
-# )
+vext(x) = -(1.0 ./ sqrt.((x - a) .^ 2 .+ 1)
+            .+
+            1.0 ./ sqrt.((x - b) .^ 2 .+ 1)
+)
 
 # Electron-electron interaction
-vee(x) = 0.
-# 1.0 ./ sqrt.(x .^ 2 .+ 1)
+# vee(x) = 0.
+vee(x) = 1.0 ./ sqrt.(x .^ 2 .+ 1)
 
 # For P1 Finite Elements
 ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
@@ -31,7 +31,7 @@ Hamglobal = hamiltonian(ne, ham)
 # @show Matrix(Hamglobal[2])
 
 E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, "FCI_full"; maxiter=50, kdim=50)
-
+E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
 
 # Orthonormalize the basis
 S = Matrix(ham.C)
@@ -65,5 +65,6 @@ Hamglobal_on = hamiltonian(ne, ham_on)
 # @show Matrix(Hamglobal_on[2])
 
 E_FCIfull2, wf_FCIfull2 = WaveFunction(ne, ham_on, "FCI_full"; maxiter=50, kdim=50)
+E_FCIsparse2, wf_FCIsparse2 = WaveFunction(ne, ham_on, "FCI_sparse"; maxiter=50, kdim=50)
 
 @show (E_FCIfull2 - E_FCIfull)
