@@ -106,6 +106,7 @@ function ham_2B_free_tensor(ne::Int64, Ψ::Array{Float64,1},
     combBasis = collect(combinations(basis1body, ne))
     # Φ = H⋅Ψ
     @assert length(Ψ) == length(combBasis)
+    @assert ne > 1 
     Φ = zeros(size(Ψ))
     # computate the permutations and paritiy
     v = 1:ne
@@ -191,6 +192,7 @@ function ham_2B_free_tensor(ne::Int64, Ψ::Array{Float64,1},
     combBasis = collect(combinations(basis1body, ne))
     # Φ = H⋅Ψ
     @assert length(Ψ) == length(combBasis)
+    @assert ne > 1
     Φ = zeros(size(Ψ))
     # computate the permutations and paritiy
     v = 1:ne

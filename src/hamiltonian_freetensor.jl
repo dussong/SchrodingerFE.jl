@@ -1,6 +1,6 @@
 
 # Compute H*Ψ and M*Ψ with Ψ is full.
-export ham_free_tensor
+export ham_free_tensor, ham_free_tensor_1ne
 
 function ham_free_tensor(ne::Int, Ψ::Array{Float64,1},
     AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
@@ -19,6 +19,7 @@ function ham_free_tensor(ne::Int, Ψ::Array{Float64,1},
     combBasis = collect(combinations(basis1body, ne))
     # Φ = H⋅Ψ
     @assert length(Ψ) == length(combBasis)
+    @assert ne > 1
     Φh = zeros(size(Ψ))
     Φm = zeros(size(Ψ))
     # computate the permutations and paritiy
@@ -142,6 +143,7 @@ function ham_free_tensor(ne::Int, Ψ::Array{Float64,1},
     combBasis = collect(combinations(basis1body, ne))
     # Φ = H⋅Ψ
     @assert length(Ψ) == length(combBasis)
+    @assert ne > 1
     Φh = zeros(size(Ψ))
     Φm = zeros(size(Ψ))
     # computate the permutations and paritiy
@@ -248,3 +250,20 @@ function ham_free_tensor(ne::Int, Ψ::Array{Float64,1},
 end
 
 ham_free_tensor(ne::Int, Ψ::Array{Float64,1}, ham::Hamiltonian) = ham_free_tensor(ne, Ψ, ham.AΔ, ham.AV, ham.C, ham.Bee; alpha_lap=ham.alpha_lap)
+
+
+function ham_free_tensor_1ne(ne::Int, Ψ::Array{Float64,1},
+    AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
+    C::SparseMatrixCSC{Float64,Int64}; alpha_lap=1.0)
+    N = C.n
+    A = 0.5 * alpha_lap * AΔ + AV
+
+    @views Ψ1 = Ψ[1:N]
+    @views Ψ2 = Ψ[N+1:2N]
+    Φh = vcat(A * Ψ1, A * Ψ2)
+    Φm = vcat(C * Ψ1, C * Ψ2)
+   
+    return Φh, Φm
+end
+
+ham_free_tensor_1ne(ne::Int, Ψ::Array{Float64,1}, ham::Hamiltonian) = ham_free_tensor_1ne(ne, Ψ, ham.AΔ, ham.AV, ham.C; alpha_lap=ham.alpha_lap)
