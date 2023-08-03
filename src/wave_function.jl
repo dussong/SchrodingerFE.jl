@@ -50,17 +50,10 @@ function WaveFunction_Matfree(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
       HΨ, MΨ = ham_free_tensor(ne, Ψ, ham)
       return HΨ, MΨ
    end
-
-   function M_Ψ_1(Ψ::Array{Float64,1})
-      HΨ, MΨ = ham_free_tensor_1ne(ne, Ψ, ham)
-      return HΨ, MΨ
-   end
-
-   E, Ψt, cvinfo = (ne == 1 ? 
-                  geneigsolve(M_Ψ_1, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true, isposdef=true) 
-                  : geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true, isposdef=true))
+   E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
+      isposdef=true)
    @show cvinfo
-   HΨt, MΨt = (ne == 1 ? ham_free_tensor_1ne(ne, Ψt[1], ham) : ham_free_tensor(ne, Ψt[1], ham))
+   HΨt, MΨt = ham_free_tensor(ne, Ψt[1], ham)
    #solving the eigenvalue problem
    # eigs(H, M, nev = 1, which=:SR) #solving the eigenvalue problem
    println("Energy: $(E[1])\n")
@@ -169,7 +162,7 @@ WaveFunction_sp(ne, dof, wfNP) = wfspGen(ne, dof, wfNP)
 
 # dvee : the derivative of Coulomb potential 1/|x|
 # dvext : the derivative of external potential b1*x^2
-function WaveFunction_SCI(ne::Int64, ham::Hamiltonian; a0=nothing, num=50, max_iter=3000, k=500, M=typeof(ham) == ham1d ? 2 : [1, 1], b1=1.0, ϵ=5.0e-7, tol=1e-6)
+function WaveFunction_SCI(ne::Int64, ham::Hamiltonian; a0=nothing, num=50, Nc = cld.(ham.N, 2), max_iter = 3000, k=500, M=typeof(ham) == ham1d ? 2 : [1, 1], b1=1.0, ϵ=5.0e-7, tol=1e-6)
 
    d = InitPT(ne, ham; num=num, a0=a0) # find the minimizers
    r0 = typeof(ham) == ham1d ?

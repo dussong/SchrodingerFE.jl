@@ -26,15 +26,60 @@ function NR(x::Vector{Float64}, f::Function; k=100)
     return x
 end
 
+function grid_point(ne::Int64, ham::ham1d, Nc::Int64, ind::Vector{Int64})
+
+    L = ham.L
+    h = @. 2L / Nc
+
+    xy = @. -L + h * (ind - 1)
+end
+
+function grid_point(ne::Int64, ham::ham2d, Nc::Vector{Int64}, ind::Vector{Int64})
+
+    Lx = ham.L[1]
+    Ly = ham.L[2]
+    hx = 2Lx / Nc[1]
+    hy = 2Ly / Nc[2]
+    Nx = Nc[1] + 1
+    Ny = Nc[2] + 1
+
+    xy = zeros(2ne)
+    for i = 1:ne
+        ni = ind[i]
+        lx = ni % Nx == 0 ? Nx : ni % Nx
+        ly = (ni - lx) / Nx + 1
+        xy[i] = lx
+        xy[i+ne] = ly
+    end
+
+    @. xy[1:ne] = -Lx + hx * (xy[1:ne] - 1)
+    @. xy[ne+1:2ne] = -Ly + hy * (xy[ne+1:2ne] - 1)
+
+    return xy
+end
+
+function Init_coarse(ne::Int64, ham::Hamiltonian, F::Function; Nc = Nc)
+
+    dof = prod(Nc .+ 1)
+    basis1body = [i for i = 1:dof]
+    comb = collect(combinations(basis1body, ne))
+
+    gp = map(x -> grid_point(ne, ham, Nc, x), comb)
+    l = collect(1:length(gp))
+
+    return gp, l
+end
+
 # num : sample number 
 # find global minimizers limited on [-L,L]
-function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing)
+function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing, Nc = cld.(ham.N,2))
 
     L = ham.L
     vee = ham.vee
     vext = ham.vext
 
     dvext(x) = @. ForwardDiff.derivative(x2 -> vext(x2), x)
+    ddvext(x) = @. ForwardDiff.derivative(x2 -> dvext(x2), x)
     dvee(x) = @. ForwardDiff.derivative(x2 -> vee(x2), x)
 
     # derivate function
@@ -62,8 +107,16 @@ function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing)
     end
 
     if a0 == nothing 
+
         a0 = [(rand(ne) .- 0.5) .* 2L for i = 1:num]
+
+        # find the local minimizers of vext
+        a1 = find_zeros(dvext, -L, L)
+        a1 = a1[findall(x -> x > 0.0, ddvext.(a1))]
+        length(a1) == ne && push!(a0, a1)
+
     end
+
     r = sort!.(NR.(a0, f))
     unique!(r)
 
@@ -81,18 +134,21 @@ function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing)
         end
     end
 
-    @assert length(l) > 0
-
+    if length(l) == 0 
+        @warn "Inaccurate initial point" 
+        r, l = Init_coarse(ne, ham, F; Nc = Nc)
+    end
+        
     Fv = F.(r[l])
     Fmin = findmin(Fv)
-    i0 = findall(x -> x < Fmin[1] + 0.01, Fv)
+    i0 = findall(x -> x < Fmin[1] + 0.001, Fv)
     l0 = l[i0]
     r0 = r[l0]
 
     return r0
 end
 
-function InitPT(ne::Int64, ham::ham2d; num=500, a0 = nothing)
+function InitPT(ne::Int64, ham::ham2d; num=500, a0 = nothing, Nc = cld.(ham.N,2))
 
     Lx = ham.L[1]
     Ly = ham.L[2]
@@ -148,14 +204,16 @@ function InitPT(ne::Int64, ham::ham2d; num=500, a0 = nothing)
         end
     end
 
-    @assert length(l) > 0
+    if length(l) == 0
+        @warn "Inaccurate initial point"
+        r, l = Init_coarse(ne, ham, F; Nc=Nc)
+    end
 
     Fv = F.(r[l])
     Fmin = findmin(Fv)
-    i0 = findall(x -> x < Fmin[1] + 0.01, Fv)
+    i0 = findall(x -> x < Fmin[1] + 0.001, Fv)
     l0 = l[i0]
     r0 = r[l0]
 
     return r0
 end
-    

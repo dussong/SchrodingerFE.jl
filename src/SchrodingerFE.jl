@@ -9,7 +9,7 @@ using TensorOperations
 using IterTools
 using PolynomialRoots
 using StatsBase
-using ForwardDiff
+using ForwardDiff, Roots
 
 # Basic functions
 include("pert_comb_index.jl")
@@ -55,6 +55,6 @@ include("Boson/pair_density_sp_bs.jl")
 include("Boson/SCE_Initial_bs_1d.jl")
 include("Boson/SCE_Initial_bs_2d.jl")
 include("Boson/CDFCI_MatFree_bs.jl")
-include("Boson/SCI_Matfree_bs.jl")
+include("Boson/SCI_MatFree_bs.jl")
 
 end
