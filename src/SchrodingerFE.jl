@@ -9,7 +9,7 @@ using TensorOperations
 using IterTools
 using PolynomialRoots
 using StatsBase
-using ForwardDiff, Roots
+using ForwardDiff, Roots, IntervalRootFinding
 
 # Basic functions
 include("pert_comb_index.jl")

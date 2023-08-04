@@ -186,6 +186,23 @@ function InitPT(ne::Int64, ham::ham2d; num=500, a0 = nothing, Nc = cld.(ham.N,2)
     
     if a0 == nothing
         a0 = [vcat((rand(ne) .- 0.5) .* 2Lx, (rand(ne) .- 0.5) .* 2Ly) for i = 1:num]
+
+        # find the local minimizers of vext
+        df(x, y) = SVector(dvext_dx(x, y), dvext_dy(x, y))
+        df(X) = df(X...)
+        X = (-Lx .. Lx) × (-Ly .. Ly)
+        rts = IntervalRootFinding.roots(df, X, IntervalRootFinding.Bisection, 1e-3)
+        rts = IntervalRootFinding.roots(df, rts, IntervalRootFinding.Bisection)
+        rr = [[rts[i].interval[1].lo, rts[i].interval[2].lo] for i = 1:length(rts)]
+        J = map(x -> ForwardDiff.jacobian(df, x), rr)
+        rr = rr[findall(x -> x > 0.0, prod.(eigvals.(J)))]
+        if length(rr) == ne
+            a1 = zeros(ne,2)
+            for i = 1:ne
+                a1[i,:] = rr[i]
+            end 
+            push!(a0, a1[:])
+        end
     end
     r = NR.(a0, f)
     unique!(r)
