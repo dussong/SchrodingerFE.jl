@@ -195,7 +195,7 @@ function InitPT(ne::Int64, ham::ham2d; num=500, a0 = nothing, Nc = cld.(ham.N,2)
         rts = IntervalRootFinding.roots(df, rts, IntervalRootFinding.Bisection)
         rr = [[rts[i].interval[1].lo, rts[i].interval[2].lo] for i = 1:length(rts)]
         J = map(x -> ForwardDiff.jacobian(df, x), rr)
-        rr = rr[findall(x -> prod((x .> 0)) > 0, eigvals.(J))]
+        rr = rr[findall(x -> isone(prod(x .> 0.0)), eigvals.(J))]
         if length(rr) == ne
             a1 = zeros(ne,2)
             for i = 1:ne
