@@ -72,7 +72,7 @@ end
 
 # num : sample number 
 # find global minimizers limited on [-L,L]
-function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing, Nc = cld.(ham.N,2))
+function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing, Nc = cld(ham.N,2))
 
     L = ham.L
     vee = ham.vee
@@ -143,7 +143,7 @@ function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing, Nc = cld.(ham.N,2)
             r, l = Init_coarse(ne, ham, F; Nc=Nc)
             Fv = F.(r)
             Fmin = findmin(Fv)[1]
-            abs(Fmin) == Inf ? Nc .+= 1 : break
+            abs(Fmin) == Inf ? Nc += 1 : break
         end
     end
 
