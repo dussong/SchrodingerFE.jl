@@ -5,7 +5,7 @@ using LinearAlgebra
 using SchrodingerFE
 using SparseArrays
 
-ne = 1; # Nb of particles
+ne = 2; # Nb of particles
 Lx = 5.0; #x interval length 
 Ly = 4.0; #y interval length 
 Nx = 20; #Nb of discretization points of the interval [-Lx,Lx]
