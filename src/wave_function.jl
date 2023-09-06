@@ -46,14 +46,12 @@ function WaveFunction_Matfree(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
    dim = (binomial(2ham.C.n, ne))
    x0 = rand(dim)
    println("Dimension of the problem: $(dim)")
-   function M_Ψ(Ψ::Array{Float64,1})
-      HΨ, MΨ = ham_free_tensor(ne, Ψ, ham)
-      return HΨ, MΨ
-   end
+   M_Ψ(Ψ::Array{Float64,1}) = ne == 1 ? ham_free_tensor_1ne(ne, Ψ, ham) : ham_free_tensor(ne, Ψ, ham)
+   
    E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
       isposdef=true)
    @show cvinfo
-   HΨt, MΨt = ham_free_tensor(ne, Ψt[1], ham)
+   HΨt, MΨt = M_Ψ(Ψt[1])
    #solving the eigenvalue problem
    # eigs(H, M, nev = 1, which=:SR) #solving the eigenvalue problem
    println("Energy: $(E[1])\n")
