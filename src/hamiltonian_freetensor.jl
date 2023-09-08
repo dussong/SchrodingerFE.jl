@@ -4,7 +4,7 @@ export ham_free_tensor, ham_free_tensor_1ne
 
 function preallocate1(ne::Int, N::Int)
    combBasis = collect(combinations(1:2*N, ne))
-   Φh = zeros(length(combBasis))
+   Φh = ones(length(combBasis))
    Φm = zeros(length(combBasis))
    return Φh, Φm, combBasis
 end
@@ -22,23 +22,41 @@ end
 function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
    C::SparseMatrixCSC{Float64,Int64},
-   B::Array{Float64,4}; alpha_lap=1.0)
+   B::Array{Float64,4}, 
+   ϕh, Φm, combBasis,
+   Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1;
+   alpha_lap=1.0)
    # N = C.n
-   Ψtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   Φhtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   Φmtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   φAtensor1 = zeros(Float64, ntuple(x -> N, ne))
-   φBtensor1 = zeros(Float64, ntuple(x -> N, ne))
-   φCtensor1 = zeros(Float64, ntuple(x -> N, ne))
+   # Ψtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
+   # Φhtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
+   # Φmtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
+   # φAtensor1 = zeros(Float64, ntuple(x -> N, ne))
+   # φBtensor1 = zeros(Float64, ntuple(x -> N, ne))
+   # φCtensor1 = zeros(Float64, ntuple(x -> N, ne))
+   Ψtensor .= 0.0
+   Φhtensor .= 0.0
+   Φmtensor .= 0.0
+   φAtensor1 .= 0.0
+   φBtensor1 .= 0.0
+   φCtensor1 .= 0.0
 
    # indecies for the basis
-   basis1body = 1:2*N
-   combBasis = collect(combinations(basis1body, ne))
+   # basis1body = 1:2*N
+   # combBasis = collect(combinations(basis1body, ne))
    # Φ = H⋅Ψ
    @assert length(Ψ) == length(combBasis)
    @assert ne > 1
-   Φh = zeros(size(Ψ))
-   Φm = zeros(size(Ψ))
+   # ϕh = zeros(size(Ψ))
+   ϕh = zeros(length(Ψ))
+   # ϕh .= 0.0
+   # @show ϕh == zeros(size(Ψ))
+   # ϕh = ones(size(Ψ))
+   # Φm = zeros(size(Ψ))
+   Φm .= 0.
+ 
+   # Φm .= 0.
+   # @show Φh
+
    # computate the permutations and paritiy
    v = 1:ne
    p = collect(permutations(v))[:]
@@ -137,10 +155,12 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
       for j = 2:ne
          l += (il[j] - 1) * (2N)^(j - 1)
       end
-      Φh[i] = Φhtensor[l]
+      # @show Φhtensor[l]
+      ϕh[i] = Φhtensor[l]
       Φm[i] = Φmtensor[l]
    end
-   return Φh, Φm ./ ne
+   # @show Φm
+   return ϕh, Φm ./ ne
 end
 
 function ham_free_tensor(ne::Int, Ψ::Array{Float64,1},

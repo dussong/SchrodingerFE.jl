@@ -46,12 +46,16 @@ end
 # construct wave-function (full) by solving Schrodinger problem with matrix free
 function WaveFunction_Matfree2(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
    dim = (binomial(2ham.C.n, ne))
-   x0 = rand(dim)
+   x0 = ones(dim)
    N = ham.C.n
    println("Dimension of the problem: $(dim)")
    Φh, Φm, combBasis = preallocate1(ne, N)
-   # Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1 = preallocate2(ne, N)
-   M_Ψ(Ψ::Array{Float64,1}) = ne == 1 ? ham_free_tensor_1ne(ne, Ψ, ham) : ham_free_tensor!(ne, Ψ, ham.AΔ, ham.AV, ham.C, ham.Bee; alpha_lap=ham.alpha_lap)
+   Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1 = preallocate2(ne, N)
+   M_Ψ(Ψ::Array{Float64,1}) = ham_free_tensor!(
+      ne, N, Ψ, ham.AΔ, ham.AV, ham.C, ham.Bee,
+      Φh, Φm, combBasis, 
+      Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1;
+      alpha_lap=ham.alpha_lap)
 
    E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
       isposdef=true)
@@ -263,6 +267,8 @@ function WaveFunction(ne, ham, method::String; kwargs...)
    if method == "FCI_full"
       return WaveFunction_FCI(ne, ham; kwargs...)
    elseif method == "FCI_sparse"
+      return WaveFunction_Matfree(ne, ham; kwargs...)
+   elseif method == "FCI_sparse2"
       return WaveFunction_Matfree2(ne, ham; kwargs...)
    elseif method == "CDFCI_sparse" && ham.element == "P1"
       return WaveFunction_CDFCI(ne, ham; kwargs...)

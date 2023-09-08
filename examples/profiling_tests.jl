@@ -1,6 +1,7 @@
 # using Plots
 #pyplot()
-
+using Profile
+using BenchmarkTools
 using LinearAlgebra
 using SchrodingerFE
 using SparseArrays
@@ -32,8 +33,9 @@ ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
 
 
 # Solve the eigenvalue problem with different methods
-E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
+@time E_FCIsparse2, wf_FCIsparse2 = WaveFunction(ne, ham, "FCI_sparse2"; maxiter=50, kdim=50)
 
+@time E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
 # myfunc() = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
 
 # # using Profile
@@ -41,3 +43,42 @@ E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim
 # # Profile.Allocs.print()
 # using BenchmarkTools
 # @btime myfunc()
+
+# N = 10
+# A = rand(N,N)
+# A = A'*A
+
+# function allocate(N)
+#    phi = zeros(N)
+#    return phi
+# end
+
+# x0 = ones(N)
+
+
+# phi = allocate(N)
+
+
+
+
+# function Ax2!(x, phi)
+#    phi .= 0 
+#    return A*x, x
+# end
+
+# using KrylovKit
+# kdim = 5
+# maxiter = 100
+# E, Ψt, cvinfo = geneigsolve(Ax2!, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
+# isposdef=true)
+
+# function 
+
+
+# M_Ψ(Ψ::Array{Float64,1}) = ham_free_tensor!(
+#    ne, N, Ψ, ham.AΔ, ham.AV, ham.C, ham.Bee,
+#    Φh, Φm, combBasis; 
+#    alpha_lap=ham.alpha_lap)
+
+# E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
+#    isposdef=true)
