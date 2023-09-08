@@ -41,6 +41,30 @@ function WaveFunction_FCI(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
    return E[1], WaveFunction_full(ne, Real.(Ψt[1]) / norm(Ψt[1]))
 end
 
+
+
+# construct wave-function (full) by solving Schrodinger problem with matrix free
+function WaveFunction_Matfree2(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
+   dim = (binomial(2ham.C.n, ne))
+   x0 = rand(dim)
+   N = ham.C.n
+   println("Dimension of the problem: $(dim)")
+   Φh, Φm, combBasis = preallocate1(ne, N)
+   # Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1 = preallocate2(ne, N)
+   M_Ψ(Ψ::Array{Float64,1}) = ne == 1 ? ham_free_tensor_1ne(ne, Ψ, ham) : ham_free_tensor!(ne, Ψ, ham.AΔ, ham.AV, ham.C, ham.Bee; alpha_lap=ham.alpha_lap)
+
+   E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
+      isposdef=true)
+   @show cvinfo
+   HΨt, MΨt = M_Ψ(Ψt[1])
+   #solving the eigenvalue problem
+   # eigs(H, M, nev = 1, which=:SR) #solving the eigenvalue problem
+   println("Energy: $(E[1])\n")
+   println("Norm of the residual: $(norm(HΨt-E[1]*MΨt))")
+   return E[1], WaveFunction_full(ne, Real.(Ψt[1]) / norm(Ψt[1]))
+end
+
+
 # construct wave-function (full) by solving Schrodinger problem with matrix free
 function WaveFunction_Matfree(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
    dim = (binomial(2ham.C.n, ne))
@@ -239,7 +263,7 @@ function WaveFunction(ne, ham, method::String; kwargs...)
    if method == "FCI_full"
       return WaveFunction_FCI(ne, ham; kwargs...)
    elseif method == "FCI_sparse"
-      return WaveFunction_Matfree(ne, ham; kwargs...)
+      return WaveFunction_Matfree2(ne, ham; kwargs...)
    elseif method == "CDFCI_sparse" && ham.element == "P1"
       return WaveFunction_CDFCI(ne, ham; kwargs...)
    elseif method == "selected_CI_sparse" && ham.element == "P1"
