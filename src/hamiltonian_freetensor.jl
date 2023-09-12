@@ -1,6 +1,6 @@
 
 # Compute H*Ψ and M*Ψ with Ψ is full.
-export ham_free_tensor, ham_free_tensor_1ne
+export ham_free_tensor, ham_free_tensor_1ne, ham_free_tensor!
 
 function preallocate1(ne::Int, N::Int)
    combBasis = collect(combinations(1:2*N, ne))
@@ -19,50 +19,57 @@ function preallocate2(ne::Int, N::Int)
    return Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1
 end
 
+
+
 function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
    C::SparseMatrixCSC{Float64,Int64},
    B::Array{Float64,4}, 
-   ϕh, Φm, combBasis,
-   Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1;
+   phih, phim, combBasis,
+   Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1;
    alpha_lap=1.0)
+
+   @show "entering ham_free_tensor!"
    # N = C.n
    # Ψtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   # Φhtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   # Φmtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   # φAtensor1 = zeros(Float64, ntuple(x -> N, ne))
-   # φBtensor1 = zeros(Float64, ntuple(x -> N, ne))
-   # φCtensor1 = zeros(Float64, ntuple(x -> N, ne))
+   # phihtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
+   # phimtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
+   # phiAtensor1 = zeros(Float64, ntuple(x -> N, ne))
+   # phiBtensor1 = zeros(Float64, ntuple(x -> N, ne))
+   # phiCtensor1 = zeros(Float64, ntuple(x -> N, ne))
    Ψtensor .= 0.0
-   Φhtensor .= 0.0
-   Φmtensor .= 0.0
-   φAtensor1 .= 0.0
-   φBtensor1 .= 0.0
-   φCtensor1 .= 0.0
+   phihtensor .= 0.0
+   phimtensor .= 0.0
+   phiAtensor1 .= 0.0
+   phiBtensor1 .= 0.0
+   phiCtensor1 .= 0.0
 
    # indecies for the basis
    # basis1body = 1:2*N
    # combBasis = collect(combinations(basis1body, ne))
-   # Φ = H⋅Ψ
+   # phi = H⋅Ψ
    @assert length(Ψ) == length(combBasis)
    @assert ne > 1
-   # ϕh = zeros(size(Ψ))
-   ϕh = zeros(length(Ψ))
-   # ϕh .= 0.0
-   # @show ϕh == zeros(size(Ψ))
-   # ϕh = ones(size(Ψ))
-   # Φm = zeros(size(Ψ))
-   Φm .= 0.
+   # phih = zeros(size(Ψ))
+   # phih = zeros(length(Ψ))
+   phih .= 0.0
+   # @show phih == zeros(size(Ψ))
+   # phih = ones(size(Ψ))
+   # phim = zeros(size(Ψ))
+   phim .= 0.0
  
-   # Φm .= 0.
-   # @show Φh
+   @show Ψ
+   # @show phih
+   # @show phim
+
+   @show phih
 
    # computate the permutations and paritiy
    v = 1:ne
    p = collect(permutations(v))[:]
    ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
    coulomb_which2 = collect(combinations(v, 2))
-   #ik = zeros(Int,ne)
+   ik = zeros(Int,ne)
    # reshape the vector Ψ to the (antisymmetric) tensor
    for j = 1:length(combBasis)
       ij = combBasis[j]
@@ -91,14 +98,14 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
       sp = sptr * N
       np = ntuple(x -> sp[x]+1:sp[x]+N, ne)
       for j = 1:ne # act A on the j-th particle
-         φAtensor = getindex(Ψtensor, np...)
-         φCtensor = copy(φAtensor)
+         phiAtensor = getindex(Ψtensor, np...)
+         phiCtensor = copy(phiAtensor)
          # perform C⊗⋯⊗C⊗A⊗C⊗⋯⊗C on the tensor ψtensor
          for i = 1:ne
             m1[1] = i
             m1[2:end] = setdiff(1:ne, i)
-            MA = reshape(permutedims!(φAtensor1, φAtensor, m1), N, N^(ne - 1))
-            MC = reshape(permutedims!(φCtensor1, φCtensor, m1), N, N^(ne - 1))
+            MA = reshape(permutedims!(phiAtensor1, phiAtensor, m1), N, N^(ne - 1))
+            MC = reshape(permutedims!(phiCtensor1, phiCtensor, m1), N, N^(ne - 1))
             if i == j
                mul!(MA1, A, MA)
             else
@@ -106,38 +113,38 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
             end
             mul!(MC1, C, MC)
             sortperm!(mp1, m1)
-            permutedims!(φAtensor, reshape(MA1, ntuple(x -> N, ne)), mp1)
-            permutedims!(φCtensor, reshape(MC1, ntuple(x -> N, ne)), mp1)
+            permutedims!(phiAtensor, reshape(MA1, ntuple(x -> N, ne)), mp1)
+            permutedims!(phiCtensor, reshape(MC1, ntuple(x -> N, ne)), mp1)
          end
-         # assemble the value to Φtensor
-         Φhtensor[np...] += φAtensor
-         Φmtensor[np...] += φCtensor
+         # assemble the value to phitensor
+         phihtensor[np...] += phiAtensor
+         phimtensor[np...] += phiCtensor
       end
 
       for j = 1:length(coulomb_which2) # act B on the k-th,l-th particle
          k = coulomb_which2[j][1]
          l = coulomb_which2[j][2]
-         φBtensor = getindex(Ψtensor, np...)
+         phiBtensor = getindex(Ψtensor, np...)
          # perform C⊗⋯⊗C⊗B⊗C⊗⋯⊗C on the tensor ψtensor
          for i = 1:ne
             if i != k && i != l
                m2[1] = i
                m2[2:end] = setdiff(1:ne, i)
-               M = reshape(permutedims!(φBtensor1, φBtensor, m2), N, N^(ne - 1))
+               M = reshape(permutedims!(phiBtensor1, phiBtensor, m2), N, N^(ne - 1))
                mul!(M1, C, M)
-               permutedims!(φBtensor, reshape(M1, ntuple(x -> N, ne)), sortperm!(mp2, m2))
+               permutedims!(phiBtensor, reshape(M1, ntuple(x -> N, ne)), sortperm!(mp2, m2))
             elseif i == k
                m2[1] = k
                m2[2] = l
                m2[3:end] = setdiff(1:ne, k, l)
-               M = reshape(permutedims!(φBtensor1, φBtensor, m2), N, N, N^(ne - 2))
+               M = reshape(permutedims!(phiBtensor1, phiBtensor, m2), N, N, N^(ne - 2))
                @. W = 0.0
                @tensor W[i, j, k] = B[i, j, a, b] * M[a, b, k]
-               permutedims!(φBtensor, reshape(W, ntuple(x -> N, ne)), sortperm!(mp2, m2))
+               permutedims!(phiBtensor, reshape(W, ntuple(x -> N, ne)), sortperm!(mp2, m2))
             end
          end
-         # assemble the value to Φtensor
-         Φhtensor[np...] += φBtensor
+         # assemble the value to phitensor
+         phihtensor[np...] += phiBtensor
       end
       # adjust sptr
       sptr[1] += 1
@@ -155,12 +162,13 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
       for j = 2:ne
          l += (il[j] - 1) * (2N)^(j - 1)
       end
-      # @show Φhtensor[l]
-      ϕh[i] = Φhtensor[l]
-      Φm[i] = Φmtensor[l]
+      @show phihtensor[l]
+      phih[i] = phihtensor[l]
+      phim[i] = phimtensor[l]
    end
-   # @show Φm
-   return ϕh, Φm ./ ne
+   @show phihtensor
+   @show phih, phim
+   return phih, phim ./ ne
 end
 
 function ham_free_tensor(ne::Int, Ψ::Array{Float64,1},
