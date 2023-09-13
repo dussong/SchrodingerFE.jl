@@ -4,9 +4,7 @@ export ham_free_tensor, ham_free_tensor_1ne, ham_free_tensor!
 
 function preallocate1(ne::Int, N::Int)
    combBasis = collect(combinations(1:2*N, ne))
-   Φh = ones(length(combBasis))
-   Φm = zeros(length(combBasis))
-   return Φh, Φm, combBasis
+   return combBasis
 end
 
 function preallocate2(ne::Int, N::Int)
@@ -19,24 +17,14 @@ function preallocate2(ne::Int, N::Int)
    return Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1
 end
 
-
-
 function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
    C::SparseMatrixCSC{Float64,Int64},
    B::Array{Float64,4}, 
-   phih, phim, combBasis,
+   combBasis,
    Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1;
    alpha_lap=1.0)
 
-   @show "entering ham_free_tensor!"
-   # N = C.n
-   # Ψtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   # phihtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   # phimtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
-   # phiAtensor1 = zeros(Float64, ntuple(x -> N, ne))
-   # phiBtensor1 = zeros(Float64, ntuple(x -> N, ne))
-   # phiCtensor1 = zeros(Float64, ntuple(x -> N, ne))
    Ψtensor .= 0.0
    phihtensor .= 0.0
    phimtensor .= 0.0
@@ -50,19 +38,8 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    # phi = H⋅Ψ
    @assert length(Ψ) == length(combBasis)
    @assert ne > 1
-   # phih = zeros(size(Ψ))
-   # phih = zeros(length(Ψ))
-   phih .= 0.0
-   # @show phih == zeros(size(Ψ))
-   # phih = ones(size(Ψ))
-   # phim = zeros(size(Ψ))
-   phim .= 0.0
- 
-   @show Ψ
-   # @show phih
-   # @show phim
-
-   @show phih
+   phih = zeros(size(Ψ))
+   phim = zeros(size(Ψ))
 
    # computate the permutations and paritiy
    v = 1:ne
@@ -162,12 +139,9 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
       for j = 2:ne
          l += (il[j] - 1) * (2N)^(j - 1)
       end
-      @show phihtensor[l]
       phih[i] = phihtensor[l]
       phim[i] = phimtensor[l]
    end
-   @show phihtensor
-   @show phih, phim
    return phih, phim ./ ne
 end
 

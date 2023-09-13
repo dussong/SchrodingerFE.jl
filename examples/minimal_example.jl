@@ -49,39 +49,13 @@ function preallocate2(ne::Int, N::Int)
    return Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1
 end
 
-
-function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
+function inside_ham_free(ne::Int, N::Int, Ψ::Array{Float64,1},
    AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
    C::SparseMatrixCSC{Float64,Int64},
    B::Array{Float64,4},
    phih, phim, combBasis,
    Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1;
    alpha_lap=1.0)
-
-   @show "ham_free_tensor! min_ex"
-   Ψtensor .= 0.0
-   phihtensor .= 0.0
-   phimtensor .= 0.0
-   phiAtensor1 .= 0.0
-   phiBtensor1 .= 0.0
-   phiCtensor1 .= 0.0
-
-   @assert length(Ψ) == length(combBasis)
-   @assert ne > 1
-   # phih = zeros(size(Ψ))
-   phih = zeros(length(Ψ))
-   phih .= 0.0
-   # @show phih == zeros(size(Ψ))
-   # phih = ones(size(Ψ))
-   # phim = zeros(size(Ψ))
-   phim .= 0.0
-
-   @show Ψ
-   # @show phih
-   # @show phim
-
-   @show phih
-
    # computate the permutations and paritiy
    v = 1:ne
    p = collect(permutations(v))[:]
@@ -180,13 +154,43 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
       for j = 2:ne
          l += (il[j] - 1) * (2N)^(j - 1)
       end
-      @show phihtensor[l]
+      # @show phihtensor[l]
       phih[i] = phihtensor[l]
       phim[i] = phimtensor[l]
    end
-   @show phihtensor
+   return phih, phim
+end
+
+
+function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
+   AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
+   C::SparseMatrixCSC{Float64,Int64},
+   B::Array{Float64,4},
+   phih, phim, combBasis,
+   Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1;
+   alpha_lap=1.0)
+
+   @show "ham_free_tensor! min_ex"
+   Ψtensor .= 0.0
+   phihtensor .= 0.0
+   phimtensor .= 0.0
+   phiAtensor1 .= 0.0
+   phiBtensor1 .= 0.0
+   phiCtensor1 .= 0.0
+
+   # phih = zeros(length(Ψ))
+   phih .= 0.0
+   @assert phih == zeros(length(Ψ))
+   phim .= 0.0
+
+   @show Ψ
+   @show phih
+
+   phih, phim = inside_ham_free(ne, N, Ψ, AΔ, AV,C,B, phih, phim, combBasis,
+      Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1;
+      alpha_lap=alpha_lap)
    @show phih, phim
-   return phih, phim ./ ne
+   return phih ./ 1., phim ./ ne
 end
 
 M_Ψ(Ψ::Array{Float64,1}) = ham_free_tensor!(
@@ -202,10 +206,7 @@ println("Dimension of the problem: $(dim)")
 phih, phim, combBasis = preallocate1(ne, N)
 Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1 = preallocate2(ne, N)
 
-
-
-
-
+# Construct the matrix
 Hmat = zeros(dim,dim)
 Mmat = zeros(dim,dim)
 

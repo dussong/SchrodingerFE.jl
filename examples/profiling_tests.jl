@@ -8,7 +8,7 @@ using SparseArrays
 
 ne = 3; # Nb of particles
 L = 10.0; #Interval length
-N = 3; #Nb of discretization points of the interval [-L,L]
+N = 30; #Nb of discretization points of the interval [-L,L]
 α = 1. #parameter in the laplace operator
 
 # Spatial mesh
