@@ -51,11 +51,11 @@ function WaveFunction_Matfree2(ne::Int, ham::Hamiltonian; kdim=10, maxiter=100)
    println("Dimension of the problem: $(dim)")
    combBasis = preallocate1(ne, N)
    Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1 = preallocate2(ne, N)
+   A = 0.5 * ham.alpha_lap * ham.AΔ + ham.AV
    M_Ψ(Ψ::Array{Float64,1}) = ham_free_tensor!(
-      ne, N, Ψ, ham.AΔ, ham.AV, ham.C, ham.Bee,
+      ne, N, Ψ, A, ham.C, ham.Bee,
       combBasis, 
-      Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1;
-      alpha_lap=ham.alpha_lap)
+      Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1)
 
    E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
       isposdef=true, verbosity=0)

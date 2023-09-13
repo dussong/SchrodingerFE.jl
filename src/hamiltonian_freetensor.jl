@@ -18,12 +18,11 @@ function preallocate2(ne::Int, N::Int)
 end
 
 function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
-   AΔ::SparseMatrixCSC{Float64,Int64}, AV::SparseMatrixCSC{Float64,Int64},
+   A::SparseMatrixCSC{Float64,Int64},
    C::SparseMatrixCSC{Float64,Int64},
    B::Array{Float64,4}, 
    combBasis,
-   Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1;
-   alpha_lap=1.0)
+   Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1)
 
    Ψtensor .= 0.0
    phihtensor .= 0.0
@@ -58,8 +57,6 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
          Ψtensor[ik] = Ψ[j] * ε[k]
       end
    end
-
-   A = 0.5 * alpha_lap * AΔ + AV
 
    # loop through different spin configurations
    sptr = zeros(Int64, ne)
