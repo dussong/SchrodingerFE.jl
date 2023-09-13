@@ -8,7 +8,7 @@ using SparseArrays
 
 ne = 3; # Nb of particles
 L = 10.0; #Interval length
-N = 30; #Nb of discretization points of the interval [-L,L]
+N = 20; #Nb of discretization points of the interval [-L,L]
 α = 1. #parameter in the laplace operator
 
 # Spatial mesh
@@ -36,6 +36,8 @@ ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
 @time E_FCIsparse2, wf_FCIsparse2 = WaveFunction(ne, ham, "FCI_sparse2"; maxiter=50, kdim=50)
 
 @time E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
+
+2
 # myfunc() = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
 
 # # using Profile

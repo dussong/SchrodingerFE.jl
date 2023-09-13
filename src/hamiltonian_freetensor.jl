@@ -2,11 +2,6 @@
 # Compute H*Ψ and M*Ψ with Ψ is full.
 export ham_free_tensor, ham_free_tensor_1ne, ham_free_tensor!
 
-function preallocate1(ne::Int, N::Int)
-   combBasis = collect(combinations(1:2*N, ne))
-   return combBasis
-end
-
 function preallocate2(ne::Int, N::Int)
    Ψtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
    Φhtensor = zeros(Float64, ntuple(x -> 2 * N, ne))
@@ -17,11 +12,37 @@ function preallocate2(ne::Int, N::Int)
    return Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1
 end
 
+function preallocate3(ne::Int, N::Int)
+   combBasis = collect(combinations(1:2*N, ne))
+   # computate the permutations and paritiy
+   v = 1:ne
+   p = collect(permutations(v))[:]
+   ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
+   coulomb_which2 = collect(combinations(v, 2))
+   ik_ind = zeros(Int, length(combBasis)*length(p))
+   k_ind = zeros(Int, length(combBasis)*length(p))
+   j_ind = zeros(Int, length(combBasis)*length(p))
+   # reshape the vector Ψ to the (antisymmetric) tensor
+   count = 1
+   for j = 1:length(combBasis)
+      for k = 1:length(p)
+         ik_ind[count] = combBasis[j][p[k][1]]
+         for l = 2:ne
+            ik_ind[count] += (combBasis[j][p[k][l]] - 1) * (2N)^(l - 1)
+         end
+         j_ind[count] = j
+         k_ind[count] = k
+         count += 1
+      end
+   end
+   return combBasis, coulomb_which2, ε, ik_ind, k_ind, j_ind
+end
+
 function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    A::SparseMatrixCSC{Float64,Int64},
    C::SparseMatrixCSC{Float64,Int64},
    B::Array{Float64,4}, 
-   combBasis,
+   combBasis, coulomb_which2, ε, ik_ind, k_ind, j_ind,
    Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1)
 
    Ψtensor .= 0.0
@@ -41,22 +62,26 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    phim = zeros(size(Ψ))
 
    # computate the permutations and paritiy
-   v = 1:ne
-   p = collect(permutations(v))[:]
-   ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
-   coulomb_which2 = collect(combinations(v, 2))
-   ik = zeros(Int,ne)
+
+   # v = 1:ne
+   # p = collect(permutations(v))[:]
+   # ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
+   # coulomb_which2 = collect(combinations(v, 2))
+   # ik = zeros(Int,ne)
    # reshape the vector Ψ to the (antisymmetric) tensor
-   for j = 1:length(combBasis)
-      ij = combBasis[j]
-      for k = 1:length(p)
-         ik = ij[p[k][1]]
-         for l = 2:ne
-            ik += (ij[p[k][l]] - 1) * (2N)^(l - 1)
-         end
-         Ψtensor[ik] = Ψ[j] * ε[k]
-      end
+   for j in 1:length(k_ind)
+      Ψtensor[ik_ind[j]] = Ψ[j_ind[j]] * ε[k_ind[j]]
    end
+   # for j = 1:length(combBasis)
+   #    # ij = combBasis[j]
+   #    for k = 1:length(p)
+   #       ik = combBasis[j][p[k][1]]
+   #       # for l = 2:ne
+   #       #    ik += (ij[p[k][l]] - 1) * (2N)^(l - 1)
+   #       # end
+   #       Ψtensor[ik] = Ψ[j] * ε[k]
+   #    end
+   # end
 
    # loop through different spin configurations
    sptr = zeros(Int64, ne)
