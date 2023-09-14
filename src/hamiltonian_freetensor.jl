@@ -9,7 +9,11 @@ function preallocate2(ne::Int, N::Int)
    φAtensor1 = zeros(Float64, ntuple(x -> N, ne))
    φBtensor1 = zeros(Float64, ntuple(x -> N, ne))
    φCtensor1 = zeros(Float64, ntuple(x -> N, ne))
-   return Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1
+   W = zeros(N, N, N^(ne - 2))
+   M1 = zeros(N, N^(ne - 1))
+   MA1 = zeros(N, N^(ne - 1))
+   MC1 = zeros(N, N^(ne - 1))
+   return Ψtensor, Φhtensor, Φmtensor, φAtensor1, φBtensor1, φCtensor1, W, M1, MA1, MC1
 end
 
 function preallocate3(ne::Int, N::Int)
@@ -43,7 +47,8 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    C::SparseMatrixCSC{Float64,Int64},
    B::Array{Float64,4}, 
    combBasis, coulomb_which2, ε, ik_ind, k_ind, j_ind,
-   Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1)
+   Ψtensor, phihtensor, phimtensor, phiAtensor1, phiBtensor1, phiCtensor1,
+   W, M1, MA1, MC1)
 
    Ψtensor .= 0.0
    phihtensor .= 0.0
@@ -52,36 +57,15 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    phiBtensor1 .= 0.0
    phiCtensor1 .= 0.0
 
-   # indecies for the basis
-   # basis1body = 1:2*N
-   # combBasis = collect(combinations(basis1body, ne))
-   # phi = H⋅Ψ
    @assert length(Ψ) == length(combBasis)
    @assert ne > 1
    phih = zeros(size(Ψ))
    phim = zeros(size(Ψ))
 
-   # computate the permutations and paritiy
-
-   # v = 1:ne
-   # p = collect(permutations(v))[:]
-   # ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
-   # coulomb_which2 = collect(combinations(v, 2))
-   # ik = zeros(Int,ne)
    # reshape the vector Ψ to the (antisymmetric) tensor
    for j in 1:length(k_ind)
       Ψtensor[ik_ind[j]] = Ψ[j_ind[j]] * ε[k_ind[j]]
    end
-   # for j = 1:length(combBasis)
-   #    # ij = combBasis[j]
-   #    for k = 1:length(p)
-   #       ik = combBasis[j][p[k][1]]
-   #       # for l = 2:ne
-   #       #    ik += (ij[p[k][l]] - 1) * (2N)^(l - 1)
-   #       # end
-   #       Ψtensor[ik] = Ψ[j] * ε[k]
-   #    end
-   # end
 
    # loop through different spin configurations
    sptr = zeros(Int64, ne)
@@ -89,13 +73,19 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
    mp1 = zeros(Int64, ne)
    m2 = zeros(Int64, ne)
    mp2 = zeros(Int64, ne)
-   W = zeros(N, N, N^(ne - 2))
-   M1 = zeros(N, N^(ne - 1))
-   MA1 = zeros(N, N^(ne - 1))
-   MC1 = zeros(N, N^(ne - 1))
+   # W = zeros(N, N, N^(ne - 2))
+   # M1 = zeros(N, N^(ne - 1))
+   # MA1 = zeros(N, N^(ne - 1))
+   # MC1 = zeros(N, N^(ne - 1))
+   W .= 0.
+   M1 .= 0.
+   MA1 .= 0.
+   MC1 .= 0.
    for s = 1:2^ne
       sp = sptr * N
+      # @show sp
       np = ntuple(x -> sp[x]+1:sp[x]+N, ne)
+      # @show np
       for j = 1:ne # act A on the j-th particle
          phiAtensor = getindex(Ψtensor, np...)
          phiCtensor = copy(phiAtensor)
@@ -164,7 +154,8 @@ function ham_free_tensor!(ne::Int, N::Int, Ψ::Array{Float64,1},
       phih[i] = phihtensor[l]
       phim[i] = phimtensor[l]
    end
-   return phih, phim ./ ne
+   phim .= phim / ne
+   return phih, phim
 end
 
 function ham_free_tensor(ne::Int, Ψ::Array{Float64,1},

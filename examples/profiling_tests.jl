@@ -31,15 +31,22 @@ ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
 # For P2 Finite Elements 
 # ham = ham1d(L, N; vext, vee, nx=4, ny=4, element="P2");
 
-
+E_FCIsparse2, wf_FCIsparse2 = WaveFunction(ne, ham, "FCI_sparse2"; maxiter=50, kdim=50)
 # Solve the eigenvalue problem with different methods
-@time E_FCIsparse2, wf_FCIsparse2 = WaveFunction(ne, ham, "FCI_sparse2"; maxiter=50, kdim=50)
+# @time E_FCIsparse2, wf_FCIsparse2 = WaveFunction(ne, ham, "FCI_sparse2"; maxiter=50, kdim=50)
 
-@time E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
+# @time E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
 
-2
-# myfunc() = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
 
+
+# 2
+# myfunc() = WaveFunction(ne, ham, "FCI_sparse2"; maxiter=50, kdim=50)
+
+# @profile myfunc()
+
+# using ProfileView
+# ProfileView.view()
+# 2
 # # using Profile
 # # Profile.Allocs.@profile myfunc()
 # # Profile.Allocs.print()
