@@ -41,8 +41,7 @@ where $\mathcal{I}$ is the full CI Slater determinant set.
 
 **Determinant selection**
 Aim to find the important determinant set $\mathcal{J}\subset\mathcal{I}$ adaptively. The corresponding approximation problem is 
-$$
-\min_{\pmb{c}|_{\mathcal{J}}\neq 0}f(\pmb{c}) \quad {\rm with}  \quad f(\pmb{c}) = \frac{\pmb{c}^\top H ^{(\alpha)} \pmb{c}}{\pmb{c}^\top S\pmb{c}}.$$
+$$\min_{\pmb{c}|_{\mathcal{J}}\neq 0}f(\pmb{c}) \quad {\rm with}  \quad f(\pmb{c}) = \frac{\pmb{c}^\top H ^{(\alpha)} \pmb{c}}{\pmb{c}^\top S\pmb{c}}.$$
 1. Find the connected set of a randomly selected subset $\mathcal{L}^{(k)} {\subset} \mathcal{J}^{(k)}$ 
 $$\mathcal{L}^{(k)}_{\rm c} := \big\{\pmb{jt} :~ \big(H ^{(\alpha)}\big)_{\pmb{is},\pmb{jt}} \neq 0,~ \pmb{is} \in \mathcal{L}^{(k)}\big\},$$
 and randomly select $\mathcal{L}^{(k)}_{\rm s}{\subset}\mathcal{L}^{(k)}_{\rm c}$ such that $|\mathcal{L}^{(k)}_{\rm s}|= O(\mathfrak{k})$. Then update $\mathcal{J}^{(k+1)} = \mathcal{J}^{(k)} \cup \mathcal{K}^{(k)}$,
