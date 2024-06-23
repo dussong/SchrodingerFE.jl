@@ -14,7 +14,7 @@ with $H_{\pmb{is},\,\pmb{jt}} = \langle\Phi_{\pmb{is}}|\mathcal{H}|\Phi_{\pmb{jt
 Both solve the eigenvalue problem by eigenvalue solvers, where *FCI_full* generates the Hamiltonian matrix directly, while *FCI_sparse* uses the matrix-free technique.
 
 #### selected_CI_sparse
-Use the selected CI algorithm in [![DOI](https://img.shields.io/badge/DOI-10.1016/j.jcp.2023.112251-blue)](https://doi.org/10.1016/j.jcp.2023.112251) to solve the eigenvalue problem. This method is only efficient for the Wigner localized systems, i.e., $\mathcal{H}_\alpha=-\alpha{T} + V_{\rm{ee}} + V_{\rm{ext}}$ with $\alpha\ll 1$. The algorithm includes two parts: initial guess construction and determinant selection.
+Use the selected CI algorithm in [![DOI](https://img.shields.io/badge/DOI-10.1016/j.jcp.2023.112251-blue)](https://doi.org/10.1016/j.jcp.2023.112251) to solve the eigenvalue problem. This method is only efficient for the Wigner localized systems, i.e., $\mathcal{H}_\alpha=-\alpha{T}+V_{\rm{ee}}+V_{\rm{ext}}$ with $\alpha\ll 1$. The algorithm includes two parts: initial guess construction and determinant selection.
 
 **Initial guess construction**
 Consider the strongly correlated limit $\alpha\to0$ as the initial guess.
