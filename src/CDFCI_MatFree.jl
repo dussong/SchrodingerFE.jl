@@ -46,7 +46,7 @@ function CDFCI_matfree_block(Ψinit::WaveFunction_sp, ham::Hamiltonian, k::Int64
         # coordinate pick
         l = Int64[]
         for i = 1:k
-            append!(l, ham_column_nonz_rd(ne, ham, j[i])) # Find the coordinates of the nonzero element of H[:,j[i]]
+            append!(l, ham_column_nonz(ne, ham, j[i])) # Find the coordinates of the nonzero element of H[:,j[i]]
         end
         unique!(l)
         Dgl = zeros(length(l))
@@ -158,7 +158,7 @@ function CDFCI_matfree_block_nbd(Ψinit::WaveFunction_sp, ham::Hamiltonian, k::I
 
         l = Int64[]
         for i = 1:k
-            append!(l, ham_column_nonz_rd(ne, ham, j[i])) # Find the coordinates of the nonzero element of H[:,j[i]]
+            append!(l, ham_column_nonz(ne, ham, j[i])) # Find the coordinates of the nonzero element of H[:,j[i]]
         end
         unique!(l)
         lk = sample(l, 2 * ne^2 * k, replace=false)

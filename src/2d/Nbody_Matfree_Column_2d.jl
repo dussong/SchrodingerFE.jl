@@ -1,6 +1,6 @@
 
 # 2D situation
-export con_ij, ham_column_nonz_rd, ham_column
+export con_ij, ham_column_nonz, ham_column_nonz_rd, ham_column
 #-------------------------------------------------------------------------------
 # PARAMETERS
 # A : 1-body operator, e.g., -Δ, v_ext
@@ -24,6 +24,57 @@ function con_ij(i::Int64, j::Int64, Nx::Int64, Ny::Int64, t::Int64)
     end
 
     return cij
+end
+
+#find the nonzero coordinates of H[:,k]
+function ham_column_nonz(ne::Int64, ham::ham2d, kl::Array{Int64,1})
+    dof = ham.C.n
+    Nx = ham.N[1] - 1
+    Ny = ham.N[2] - 1
+
+    XY = zeros(Int, 9, ne)
+
+    for i = 1:ne
+        nk = kl[i] > dof ? kl[i] - dof : kl[i]
+        ns = kl[i] > dof ? dof : 0
+        lx = nk % Nx == 0 ? Nx : nk % Nx
+        ly = Int((nk - lx) / Nx) + 1
+        @views XY[:, i] = con_ij(lx, ly, Nx, Ny, ns)
+    end
+
+    l = Int[]
+    Φk = zeros(Int64, ne)
+    Φktr = ones(Int64, ne)
+    for ti = 1:9^ne
+        for i = 1:ne
+            Φk[i] = XY[Φktr[i], i]
+        end
+        if !(0 in Φk)
+            sort!(Φk)
+            if Φk[1] != Φk[2] && Φk[ne-1] != Φk[ne]
+                if ne <= 3
+                    push!(l, seq2num_ns(2dof, ne, Φk))
+                else
+                    @views Φm = Φk[1:ne-1] - Φk[2:ne]
+                    if !(0 in Φm)
+                        push!(l, seq2num_ns(2dof, ne, Φk))
+                    end
+                end
+            end
+        end
+
+        Φktr[1] += 1
+        for ℓ = 1:ne-1
+            if Φktr[ℓ] == 10
+                Φktr[ℓ] = 1
+                Φktr[ℓ+1] += 1
+            end
+        end
+    end
+
+    l = unique!(l)
+
+    return l
 end
 
 #Randomly find a part of the nonzero coordinates of H[:,k]

@@ -38,10 +38,10 @@ vee(x, y) = 1 / sqrt(x^2 + y^2)
 ham = ham2d(L, N; alpha_lap=α, vext, vee, nx1=4, ny1=4, nx2=3, ny2=3);
 
 # Solve the eigenvalue problem
-E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, "FCI_full"; maxiter=50, kdim=50)
-E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
-E_CDFCIsparse, wf_CDFCIsparse = WaveFunction(ne, ham, "CDFCI_sparse"; max_iter=1000, k=500)
-E_SCIsparse, wf_SCIsparse = WaveFunction(ne, ham, "selected_CI_sparse"; max_iter=1000, k=500, num=100)
+E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, FCI_full(); maxiter=50, kdim=50)
+E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, FCI_sparse(); maxiter=50, kdim=50)
+E_CDFCIsparse, wf_CDFCIsparse = WaveFunction(ne, ham, CDFCI_sparse(); max_iter=1000, k=500)
+E_SCIsparse, wf_SCIsparse = WaveFunction(ne, ham, selected_CI_sparse(); max_iter=1000, k=500, num=100)
 
 # Convert WF into full version
 wf_SCIsparse_converted = WaveFunction_full(ne, Array(wf_SCIsparse.wfP))

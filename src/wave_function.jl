@@ -16,6 +16,9 @@
 #----------------------------------------------------------------------------
 export WaveFunction, WaveFunction_full, WaveFunction_sp, density, pair_density, pair_density_spin
 
+export FCI_full, FCI_sparse, selected_CI_sparse, CDFCI_sparse
+export HF, SCE_limit
+
 abstract type WaveFunction end
 
 """WaveFunction_full
@@ -28,7 +31,8 @@ struct WaveFunction_full <: WaveFunction
 end
 
 # construct wave-function (full) by directly solving Schrodinger problem
-function WaveFunction_FCI(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
+struct FCI_full end
+function WaveFunction(ne::Int, ham::Hamiltonian, ::FCI_full; kdim=5, maxiter=100)
    dim = (binomial(2ham.C.n, ne))
    println("Dimension of the problem: $(dim)")
    H, M = hamiltonian(ne, ham)
@@ -42,7 +46,8 @@ function WaveFunction_FCI(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
 end
 
 # construct wave-function (full) by solving Schrodinger problem with matrix free
-function WaveFunction_Matfree(ne::Int, ham::Hamiltonian; kdim=5, maxiter=100)
+struct FCI_sparse end
+function WaveFunction(ne::Int, ham::Hamiltonian, ::FCI_sparse; kdim=5, maxiter=100)
    dim = (binomial(2ham.C.n, ne))
    x0 = rand(dim)
    println("Dimension of the problem: $(dim)")
@@ -160,23 +165,32 @@ WaveFunction_sp(ne, dof, wfNP) = wfspGen(ne, dof, wfNP)
 
 # dvee : the derivative of Coulomb potential 1/|x|
 # dvext : the derivative of external potential b1*x^2
-function WaveFunction_SCI(ne::Int64, ham::Hamiltonian; a0=nothing, num=50, Nc = cld.(ham.N, 2), max_iter = 3000, k=500, M=typeof(ham) == ham1d ? 2 : [1, 1], b1=1.0, ϵ=5.0e-7, tol=1e-6)
+struct selected_CI_sparse end
+function WaveFunction(ne::Int64, ham::Hamiltonian, ::selected_CI_sparse; a0=nothing, num=50, max_iter=3000, k=500, M=typeof(ham) == ham1d ? 2 : [1, 1], ϵ=5.0e-7, tol=1e-6)
+   @assert ham.element == "P1"
 
-   d = InitPT(ne, ham; num=num, a0=a0) # find the minimizers
+   d = InitPT(ne, ham; num, a0) # find the minimizers
    r0 = typeof(ham) == ham1d ?
         [round.(Int, (d[i] .+ ham.L) .* ham.N ./ (2ham.L)) for i = 1:length(d)] :
         [vcat(round.(Int, (d[i][1:ne] .+ ham.L[1]) .* ham.N[1] ./ (2ham.L[1])), round.(Int, (d[i][ne+1:2ne] .+ ham.L[2]) .* ham.N[2] ./ (2ham.L[2]))) for i = 1:length(d)]
    unique!(r0)
    println("-------------------------------------------------------------------------------")
-   @time wf, H1, M1 = sce_iv(ne, r0, ham; M=M) # wf : wave_function; H1/M1 : initial ground state energy
+   @time wf, H1, M1 = sce_iv(ne, r0, ham; M) # wf : wave_function; H1/M1 : initial ground state energy
    println("  SCI:")
-   @time y1, num1, c1 = SCI_matfree(wf, ham, k; max_iter=max_iter, ϵ=ϵ, tol=tol) # iteration by SCI algorithm
+   @time y1, num1, c1 = SCI_matfree(wf, ham, k; max_iter, ϵ, tol) # iteration by SCI algorithm
    c1 = c1 / norm(c1)
    wf = WaveFunction_sp(ne, ham.C.n, c1)
+
+   println("Energy: $(y1[end])\n")
+   Hψ, Mψ =  ham_column(ne, wf.combBasis, wf.val, ham)
+   println("Norm of the residual: $(norm(Hψ-y1[end]*Mψ))")
+
    return y1[end], wf
 end
 
-function WaveFunction_CDFCI(ne, ham; max_iter=3000, k=500, b1=1.0, ϵ=5.0e-7, tol=1e-6)
+struct CDFCI_sparse end
+function WaveFunction(ne, ham, ::CDFCI_sparse; max_iter=3000, k=500, b1=1.0, ϵ=5.0e-7, tol=1e-6)
+   @assert ham.element == "P1"
 
    println("-------------------------------------------------------------------------------")
    # generate HF initial state
@@ -185,6 +199,11 @@ function WaveFunction_CDFCI(ne, ham; max_iter=3000, k=500, b1=1.0, ϵ=5.0e-7, to
    @time y1, num1, c1 = CDFCI_matfree_block(wfhf, ham, k; max_iter=max_iter, ϵ=ϵ, tol=tol) # iteration by CDFCI algorithm
    c1 = c1 / norm(c1)
    wf = WaveFunction_sp(ne, ham.C.n, c1)
+
+   println("Energy: $(y1[end])\n")
+   Hψ, Mψ = ham_column(ne, wf.combBasis, wf.val, ham)
+   println("Norm of the residual: $(norm(Hψ-y1[end]*Mψ))")
+
    return y1[end], wf
 end
 
@@ -227,22 +246,36 @@ function pair_density_spin(s1::Int64, s2::Int64, Ψ::WaveFunction_sp, ham::ham1d
    return pair_density_spin(s1, s2, Ψ_converted, ham; x=x)
 end
 
-# function WaveFunction(ne, ham, method::String;kwargs...) 
-#    if method == "FCI_full"
-#       return WaveFunction_full(ne, ham; kdim=5, maxiter=100) 
-#    elseif method == "FCI_sparse"
-#       return WaveFunction_sp(ne, ham; kdim=5, maxiter=100) 
-#    end
-# end
+# initial state wavefunction
+# Hartree Fock
+struct HF end
+function WaveFunction(ne, ham, ::HF) 
+   wf, U, Hv, Mv = HF(ne, ham)
+   E = Hv/Mv
+   
+   println("Energy: $(E)\n")
+   Hψ, Mψ = ham_column(ne, wf.combBasis, wf.val, ham)
+   println("Norm of the residual: $(norm(Hψ-E*Mψ))")
 
-function WaveFunction(ne, ham, method::String; kwargs...)
-   if method == "FCI_full"
-      return WaveFunction_FCI(ne, ham; kwargs...)
-   elseif method == "FCI_sparse"
-      return WaveFunction_Matfree(ne, ham; kwargs...)
-   elseif method == "CDFCI_sparse" && ham.element == "P1"
-      return WaveFunction_CDFCI(ne, ham; kwargs...)
-   elseif method == "selected_CI_sparse" && ham.element == "P1"
-      return WaveFunction_SCI(ne, ham; kwargs...)
-   end
+   return E, wf
+end
+
+# semi-classical limit
+struct SCE_limit end
+function WaveFunction(ne::Int64, ham::Hamiltonian, ::SCE_limit; a0=nothing, num=50, M=typeof(ham) == ham1d ? 2 : [1, 1])
+
+   d = InitPT(ne, ham; num, a0) # find the minimizers
+   r0 = typeof(ham) == ham1d ?
+        [round.(Int, (d[i] .+ ham.L) .* ham.N ./ (2ham.L)) for i = 1:length(d)] :
+        [vcat(round.(Int, (d[i][1:ne] .+ ham.L[1]) .* ham.N[1] ./ (2ham.L[1])), round.(Int, (d[i][ne+1:2ne] .+ ham.L[2]) .* ham.N[2] ./ (2ham.L[2]))) for i = 1:length(d)]
+   unique!(r0)
+
+   @time wf, Hv, Mv = sce_iv(ne, r0, ham; M) 
+   E = Hv / Mv
+
+   println("Energy: $(E)\n")
+   Hψ, Mψ = ham_column(ne, wf.combBasis, wf.val, ham)
+   println("Norm of the residual: $(norm(Hψ-E*Mψ))")
+
+   return E, wf
 end

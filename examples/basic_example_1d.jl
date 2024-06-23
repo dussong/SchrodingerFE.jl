@@ -32,10 +32,14 @@ ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
 
 
 # Solve the eigenvalue problem with different methods
-E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, "FCI_full"; maxiter=50, kdim=50)
-E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, "FCI_sparse"; maxiter=50, kdim=50)
-E_CDFCIsparse, wf_CDFCIsparse = WaveFunction(ne, ham, "CDFCI_sparse"; max_iter=1000, k=500)
-E_SCIsparse, wf_SCIsparse = WaveFunction(ne, ham, "selected_CI_sparse";max_iter=1000, k=500, num=100, M=2)
+E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, FCI_full(); maxiter=50, kdim=50);
+E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham, FCI_sparse(); maxiter=50, kdim=50);
+E_CDFCIsparse, wf_CDFCIsparse = WaveFunction(ne, ham, CDFCI_sparse(); max_iter=100, k=500);
+E_SCIsparse, wf_SCIsparse = WaveFunction(ne, ham, selected_CI_sparse();max_iter=100, k=500, num=100, M=2);
+
+# Solve the eigenvalue problem with naive methods
+E_HF, wf_HF = WaveFunction(ne, ham, HF());
+E_SCElimit, wf_SCElimit = WaveFunction(ne, ham, SCE_limit());
 
 # To convert the sparse WF as a full WF
 wf_SCIsparse_converted = WaveFunction_full(ne, Array(wf_SCIsparse.wfP))
