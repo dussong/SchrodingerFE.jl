@@ -19,10 +19,12 @@ Use the selected CI algorithm in [![DOI](https://img.shields.io/badge/DOI-10.101
 **Initial guess construction**
 Consider the strongly correlated limit $\alpha\to0$ as the initial guess.
 1. Solve the $\alpha=0$ limit problem 
-$$\begin{equation}\min_{(r_1,\cdots,r_N)\in\Omega^N} F(r_1,\dots,r_N)= \sum_{1\leq i<j\leq N} v_{\rm ee}\big(|r_i-r_j|\big) + \sum_{i=1}^{N} v_{\rm ext}(r_i)\end{equation}$$
+\begin{equation}
+\min_{(r_1,\cdots,r_N)\in\Omega^N} F(r_1,\dots,r_N)= \sum_{1\leq i<j\leq N} v_{\rm ee}\big(|r_i-r_j|\big) + \sum_{i=1}^{N} v_{\rm ext}(r_i)
+\end{equation}
 to obtain the minimizer subset $U_{\rm s}$.
 
-2. Select the Slater determinants corresponding to $U_{\rm s}$
+1. Select the Slater determinants corresponding to $U_{\rm s}$
 $$\begin{aligned}
 				\mathcal{I}_{\delta} := \bigcup_{(\pmb{r}_1,\dots,\pmb{r}_N)\in U_{\rm s}}\Big\{ \pmb{is}\in\mathcal{I}~:~
 				\text{there exists a permutation } \mathcal{P}\text{ of }\{1,\cdots,N\}&
