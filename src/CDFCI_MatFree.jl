@@ -114,7 +114,7 @@ function CDFCI_matfree_block(Ψinit::WaveFunction_sp, ham::Hamiltonian, k::Int64
         M1 += 2 * β * dot(Dg, d) - β^2 * gM
 
         energy = H1 / M1
-        t % 10 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
+        t % 50 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
 
         push!(y, energy)
         push!(num, length(c.nzind))
@@ -217,7 +217,7 @@ function CDFCI_matfree_block_nbd(Ψinit::WaveFunction_sp, ham::Hamiltonian, k::I
         M1 += 2 * β * dot(Dgk, dk) - β^2 * gM
 
         energy = H1 / M1
-        t % 10 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
+        t % 50 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
         push!(y, energy)
     end
     @printf "  final iteration res : %.8f  \n" abs(y[end] - y[end-1])

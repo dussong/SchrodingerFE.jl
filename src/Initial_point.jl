@@ -58,7 +58,7 @@ function grid_point(ne::Int64, ham::ham2d, Nc::Vector{Int64}, ind::Vector{Int64}
     return xy
 end
 
-function Init_coarse(ne::Int64, ham::Hamiltonian, F::Function; Nc = Nc)
+function Init_coarse(ne::Int64, ham::Hamiltonian, F::Function, Nc)
 
     dof = prod(Nc .+ 1)
     basis1body = [i for i = 1:dof]
@@ -140,7 +140,7 @@ function InitPT(ne::Int64, ham::ham1d; num=500, a0 = nothing, Nc = cld(ham.N,2))
     else
         @warn "Inaccurate initial point"
         for k = 1:10
-            r, l = Init_coarse(ne, ham, F; Nc=Nc)
+            r, l = Init_coarse(ne, ham, F, Nc)
             Fv = F.(r)
             Fmin = findmin(Fv)[1]
             abs(Fmin) == Inf ? Nc += 1 : break
@@ -233,7 +233,7 @@ function InitPT(ne::Int64, ham::ham2d; num=500, a0 = nothing, Nc = cld.(ham.N,2)
     else
         @warn "Inaccurate initial point"
         for k = 1:10      
-            r, l = Init_coarse(ne, ham, F; Nc=Nc)
+            r, l = Init_coarse(ne, ham, F, Nc)
             Fv = F.(r)
             Fmin = findmin(Fv)[1]
             abs(Fmin) == Inf ? Nc .+= 1 : break

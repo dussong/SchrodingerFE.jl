@@ -121,7 +121,7 @@ function SCI_matfree(Ψinit::WaveFunction_sp, ham::Hamiltonian, k::Int64; max_it
         M1 += 2 * β * dot(Dg, d) - β^2 * gM
 
         energy = H1 / M1
-        t % 10 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
+        t % 50 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
 
         push!(y, energy)
         push!(num, length(c.nzind))
@@ -222,7 +222,7 @@ function SCI_matfree_nbd(Ψinit::WaveFunction_sp, ham::Hamiltonian, k::Int64, H1
         M1 += 2 * β * dot(Dgk, dk) - β^2 * gM
 
         energy = H1 / M1
-        t % 10 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
+        t % 50 == 0 && @printf "  %4.d  |   %.8f  \n" t energy
 
         push!(y, H1 / M1)
         push!(num, length(c.nzind))
