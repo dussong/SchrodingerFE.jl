@@ -21,7 +21,7 @@ function density_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64
     Ψtensor = zeros(Float64, ntuple(x -> 2 * N, n))
     basis1body = 1:2*N
     combBasis = collect(combinations(basis1body, n))
-    # compute the permutations and paritiy
+    # compute the permutations and parity
     v = 1:n
     p = collect(permutations(v))[:]
     ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
@@ -219,9 +219,74 @@ pair_density(xy::Array{Float64,2}, L::Float64, coef::Array{Float64,2}) =
 pair_density(xy::Array{Float64,2}, L::Float64, n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64,Int64}) = pair_density(xy, L, pair_density_coef(n, Ψ, C))
 
 
-# compute the one-body reduced density matrix from Ψ
-function one_body_DM(Ψ::Array{Float64,1})
+# compute the coefficients for one body density matrix (untested)
+function one_body_DM_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64,Int64})
+    N = C.n
+    Ψtensor = zeros(Float64, ntuple(x -> 2 * N, n))
+    basis1body = 1:2*N
+    combBasis = collect(combinations(basis1body, n))
+    # compute the permutations and parity
+    v = 1:n
+    p = collect(permutations(v))[:]
+    ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
 
+    mat_gamma = zeros(Float64,N,N)
+
+    # reshape the vector Ψ to the (antisymmetric) tensor
+    for j = 1:length(combBasis)
+        ij = combBasis[j]
+        for k = 1:length(p)
+            ik = seq2num_ns(2N, n, ij[p[k]])
+            Ψtensor[ik] = Ψ[j] * ε[k]
+        end
+    end
+
+
+    mass = overlap(n - 1, C)
+    for kx = 1:2*N # first variable x
+        for ky = 1:2*N # first variable y
+            sptr = zeros(Int, n - 1, 1)
+            for s = 1:2^(n-1) #loop over spin variables
+                # all other variables
+                sp = sptr * N
+                ukx = getindex(Ψtensor, kx, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
+                ukvecx = reshape(ukx, N^(n - 1), 1)[:]
+                uky = getindex(Ψtensor, ky, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
+                ukvecy = reshape(uky, N^(n - 1), 1)[:]
+                if kx <= N
+                    if ky <= N
+                        mat_gamma[kx,ky] += dot(ukvecx, mass, ukvecy)
+                    else 
+                        mat_gamma[kx,ky-N] += dot(ukvecx, mass, ukvecy)
+                    end
+                else
+                    if ky <= N
+                        mat_gamma[kx-N,ky] += dot(ukvecx, mass, ukvecy)
+                    else 
+                        mat_gamma[kx-N,ky-N] += dot(ukvecx, mass, ukvecy)
+                    end
+                end
+                # adjust sptr
+                sptr[1] += 1
+                if n >= 3
+                    for ℓ = 1:n-2
+                        if sptr[ℓ] == 2
+                            sptr[ℓ] = 0
+                            sptr[ℓ+1] += 1
+                        end
+                    end
+                end # end if
+            end
+        end
+    end
+    return 0.5*(mat_gamma+mat_gamma')
+end
+
+
+# compute the one-body reduced density matrix from coef
+# untested
+function one_body_DM(x::Float64, y::Float64, L::Float64, coef::Array{Float64,2})
+ 
 end
 
 # compute the coefficients for pair pair_density_spin
