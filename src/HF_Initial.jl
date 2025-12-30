@@ -31,11 +31,11 @@ function genFock(AH, AF, ρ, B::SparseMatrixCSC{Float64,Int64})
         jtr = jptr[j]
         if jtr > 0
             jx = j % N == 0 ? N : j % N
-            jy = Int((j - jx) / N) + 1
+            jy = div(j - jx, N) + 1
             for k = 1:jtr
                 i = rowval[count+k]
                 ix = i % N == 0 ? N : i % N
-                iy = Int((i - ix) / N) + 1
+                iy = div(i - ix, N) + 1
 
                 AH[ix, jx] += B[i, j] * ρ[iy, jy]
                 AF[ix, jx] += B[i, j] * ρ[ix, iy]
@@ -67,7 +67,7 @@ function scfHF(ne::Int64, ham::Hamiltonian, Norb::Int64,
     A = 0.5 .* alpha_lap .* AΔ + AV
     λ, W = eigs(A, M; nev=Norb, which=:SR)
     ρ1 = zeros(N, N)
-    for k = 1:Norb
+    @views for k = 1:Norb
         ρ1 += 2.0 * W[:, k] * W[:, k]'
     end
     ρ = copy(ρ1)
@@ -85,7 +85,7 @@ function scfHF(ne::Int64, ham::Hamiltonian, Norb::Int64,
 
         λ, W = eigs(H, M; nev=Norb, which=:SR)
         ρ2 = zeros(N, N)
-        for j = 1:Norb
+        @views for j = 1:Norb
             ρ2 += 2.0 * W[:, j] * W[:, j]'
         end
         ρ = k1 .* ρ1 + k2 .* ρ2
@@ -141,9 +141,9 @@ function HFtoFCI(ne::Int64, N::Int64, U::Array{Float64,2})
     return c0
 end
 
-function HF_1B(ne::Int64, U::Array{Float64,2}, A::SparseMatrixCSC{Float64,Int64},
-    C::SparseMatrixCSC{Float64,Int64})
-
+function HF_1B(ne::Int64, U::Array{Float64,2}, 
+               A::SparseMatrixCSC{Float64,Int64},
+               C::SparseMatrixCSC{Float64,Int64})
     N = size(U, 1)
     rowval = A.rowval
     jptr = A.colptr[2:end] - A.colptr[1:end-1]
@@ -169,7 +169,6 @@ function HF_1B(ne::Int64, U::Array{Float64,2}, A::SparseMatrixCSC{Float64,Int64}
 end
 
 function HF_2B(ne::Int64, U::Array{Float64,2}, B::Array{Float64,4})
-
     N = size(U, 1)
     m1 = cld(ne, 2)
     Bf = zeros(Float64, m1, m1, m1, m1)
@@ -184,7 +183,6 @@ function HF_2B(ne::Int64, U::Array{Float64,2}, B::Array{Float64,4})
 end
 
 function HF_2B(ne::Int64, U::Array{Float64,2}, B::SparseMatrixCSC{Float64,Int64})
-
     N = size(U, 1)
     m1 = cld(ne, 2)
     rowval = B.rowval
@@ -197,11 +195,11 @@ function HF_2B(ne::Int64, U::Array{Float64,2}, B::SparseMatrixCSC{Float64,Int64}
             ltr = lptr[l]
             if ltr > 0
                 l1 = l % N == 0 ? N : l % N
-                l2 = Int((l - l1) / N) + 1
+                l2 = div(l - l1, N) + 1
                 for li = 1:ltr
                     k = rowval[count+li]
                     k1 = k % N == 0 ? N : k % N
-                    k2 = Int((k - k1) / N) + 1
+                    k2 = div(k - k1, N) + 1
 
                     Bf[i1, i2, j1, j2] += U[k1, i1] * U[k2, i2] * U[l1, j1] * U[l2, j2] * B[k, l]
                 end
@@ -268,7 +266,6 @@ end
 
 function HF(ne::Int64, ham::Hamiltonian; Norb=cld(ne, 2), 
             max_iter=100, mixing=0.8, scf_tol=1e-5)
-
     println("SCF time : ")
     @time U0 = scfHF(ne, ham, Norb, max_iter, mixing, scf_tol)
     U = real.(U0)

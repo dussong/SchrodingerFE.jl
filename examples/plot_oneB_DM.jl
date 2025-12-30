@@ -34,7 +34,11 @@ ham = ham1d(L, N; alpha_lap=α, vext=vext, vee);
 
 
 # Solve the eigenvalue problem with different methods
-E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, "FCI_full"; maxiter=50, kdim=50)
+E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, FCI_full(); maxiter=50, kdim=50)
 
 plot(xx,SchrodingerFE.density(wf_FCIfull, ham))
-heatmap(xx,xx,SchrodingerFE.one_body_DM_coef(ne, wf_FCIfull.wf, ham.C))
+
+dm_coef = SchrodingerFE.one_body_DM_coef(ne, wf_FCIfull.wf, ham.C)
+ρ2 = [SchrodingerFE.one_body_DM(x, x, ham.L, dm_coef) for x in xx]
+plot(xx, ρ2)
+heatmap(xx, xx, SchrodingerFE.one_body_DM(xx, xx, ham.L, dm_coef))

@@ -30,13 +30,15 @@ struct WaveFunction_full <: WaveFunction
    wf::Vector{Float64}
 end
 
+abstract type SchrodingerSolver end
+
 # construct wave-function (full) by directly solving Schrodinger problem
-struct FCI_full end
+struct FCI_full <: SchrodingerSolver end
 function WaveFunction(ne::Int, ham::Hamiltonian, ::FCI_full; kdim=5, maxiter=100)
    dim = (binomial(2ham.C.n, ne))
    println("Dimension of the problem: $(dim)")
    H, M = hamiltonian(ne, ham)
-   E, Ψt, cvinfo = geneigsolve((H, M), 1, :SR; krylovdim=kdim, maxiter=maxiter)
+   E, Ψt, cvinfo = geneigsolve((H, M), 1, :SR; krylovdim=kdim, maxiter)
    @show cvinfo
    #solving the eigenvalue problem
    # eigs(H, M, nev = 1, which=:SR) #solving the eigenvalue problem
@@ -46,15 +48,14 @@ function WaveFunction(ne::Int, ham::Hamiltonian, ::FCI_full; kdim=5, maxiter=100
 end
 
 # construct wave-function (full) by solving Schrodinger problem with matrix free
-struct FCI_sparse end
+struct FCI_sparse <: SchrodingerSolver end
 function WaveFunction(ne::Int, ham::Hamiltonian, ::FCI_sparse; kdim=5, maxiter=100)
    dim = (binomial(2ham.C.n, ne))
    x0 = rand(dim)
    println("Dimension of the problem: $(dim)")
    M_Ψ(Ψ::Array{Float64,1}) = ne == 1 ? ham_free_tensor_1ne(ne, Ψ, ham) : ham_free_tensor(ne, Ψ, ham)
    
-   E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter=maxiter, issymmetric=true,
-      isposdef=true)
+   E, Ψt, cvinfo = geneigsolve(M_Ψ, x0, 1, :SR; krylovdim=kdim, maxiter, issymmetric=true, isposdef=true)
    @show cvinfo
    HΨt, MΨt = M_Ψ(Ψt[1])
    #solving the eigenvalue problem
@@ -165,7 +166,7 @@ WaveFunction_sp(ne, dof, wfNP) = wfspGen(ne, dof, wfNP)
 
 # dvee : the derivative of Coulomb potential 1/|x|
 # dvext : the derivative of external potential b1*x^2
-struct selected_CI_sparse end
+struct selected_CI_sparse <: SchrodingerSolver end
 function WaveFunction(ne::Int64, ham::Hamiltonian, ::selected_CI_sparse; a0=nothing, num=50, max_iter=3000, k=500, M=typeof(ham) == ham1d ? 2 : [1, 1], ϵ=5.0e-7, tol=1e-6)
    @assert ham.element == "P1"
 
@@ -188,7 +189,7 @@ function WaveFunction(ne::Int64, ham::Hamiltonian, ::selected_CI_sparse; a0=noth
    return y1[end], wf
 end
 
-struct CDFCI_sparse end
+struct CDFCI_sparse <: SchrodingerSolver end
 function WaveFunction(ne, ham, ::CDFCI_sparse; max_iter=3000, k=500, b1=1.0, ϵ=5.0e-7, tol=1e-6)
    @assert ham.element == "P1"
 
@@ -248,7 +249,7 @@ end
 
 # initial state wavefunction
 # Hartree Fock
-struct HF end
+struct HF <: SchrodingerSolver end
 function WaveFunction(ne, ham, ::HF) 
    wf, U, Hv, Mv = HF(ne, ham)
    E = Hv/Mv
@@ -261,7 +262,7 @@ function WaveFunction(ne, ham, ::HF)
 end
 
 # semi-classical limit
-struct SCE_limit end
+struct SCE_limit <: SchrodingerSolver end
 function WaveFunction(ne::Int64, ham::Hamiltonian, ::SCE_limit; a0=nothing, num=50, M=typeof(ham) == ham1d ? 2 : [1, 1])
 
    d = InitPT(ne, ham; num, a0) # find the minimizers

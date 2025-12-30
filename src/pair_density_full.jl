@@ -51,7 +51,7 @@ function density_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64
             for s = 1:2^(n-1)
                 sp = sptr * N
                 uk = getindex(Ψtensor, k, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-                ukvec = reshape(uk, N^(n - 1), 1)[:]
+                ukvec = vec(uk)
                 if k <= N
                     val[k] += dot(ukvec, mass, ukvec)
                 else
@@ -59,13 +59,13 @@ function density_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64
                 end
                 if k < N
                     uk_right = getindex(Ψtensor, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-                    ukvec_right = reshape(uk_right, N^(n - 1), 1)[:]
+                    ukvec_right = vec(uk_right)
                     val[N+k] += dot(ukvec, mass, ukvec_right)
                     val[2*N+k-1] += dot(ukvec, mass, ukvec_right)
                 end
                 if k > N && k < 2 * N
                     uk_right = getindex(Ψtensor, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-                    ukvec_right = reshape(uk_right, N^(n - 1), 1)[:]
+                    ukvec_right = vec(uk_right)
                     val[k] += dot(ukvec, mass, ukvec_right)
                     val[N+k-1] += dot(ukvec, mass, ukvec_right)
                 end
@@ -158,16 +158,16 @@ function pair_density_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Fl
             for s = 1:2^(n-2)
                 sp = sptr * N
                 u = getindex(Ψtensor, j, k, ntuple(x -> sp[x]+1:sp[x]+N, n - 2)...)
-                uvec = reshape(u, N^(n - 2), 1)[:]
+                uvec = vec(u)
                 coef[jp+1, kp+1] += dot(uvec, mass, uvec)
                 if jp < N
                     u_xr = getindex(Ψtensor, j + 1, k, ntuple(x -> sp[x]+1:sp[x]+N, n - 2)...)
-                    uvec_xr = reshape(u_xr, N^(n - 2), 1)[:]
+                    uvec_xr = vec(u_xr)
                     coef[N+2+jp+1, kp+1] += dot(uvec_xr, mass, uvec)
                 end
                 if kp < N
                     u_yr = getindex(Ψtensor, j, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 2)...)
-                    uvec_yr = reshape(u_yr, N^(n - 2), 1)[:]
+                    uvec_yr = vec(u_yr)
                     coef[jp+1, N+2+kp+1] += dot(uvec_yr, mass, uvec)
                 end
                 if jp < N && kp < N
@@ -218,7 +218,6 @@ pair_density(xy::Array{Float64,2}, L::Float64, coef::Array{Float64,2}) =
 
 pair_density(xy::Array{Float64,2}, L::Float64, n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64,Int64}) = pair_density(xy, L, pair_density_coef(n, Ψ, C))
 
-
 # compute the coefficients for one body density matrix (untested)
 function one_body_DM_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Float64,Int64})
     N = C.n
@@ -241,52 +240,82 @@ function one_body_DM_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixCSC{Flo
         end
     end
 
-
     mass = overlap(n - 1, C)
-    for kx = 1:2*N # first variable x
-        for ky = 1:2*N # first variable y
-            sptr = zeros(Int, n - 1, 1)
-            for s = 1:2^(n-1) #loop over spin variables
-                # all other variables
-                sp = sptr * N
-                ukx = getindex(Ψtensor, kx, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-                ukvecx = reshape(ukx, N^(n - 1), 1)[:]
-                uky = getindex(Ψtensor, ky, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...)
-                ukvecy = reshape(uky, N^(n - 1), 1)[:]
-                if kx <= N
-                    if ky <= N
-                        mat_gamma[kx,ky] += dot(ukvecx, mass, ukvecy)
-                    else 
-                        mat_gamma[kx,ky-N] += dot(ukvecx, mass, ukvecy)
-                    end
-                else
-                    if ky <= N
-                        mat_gamma[kx-N,ky] += dot(ukvecx, mass, ukvecy)
-                    else 
-                        mat_gamma[kx-N,ky-N] += dot(ukvecx, mass, ukvecy)
-                    end
-                end
-                # adjust sptr
-                sptr[1] += 1
-                if n >= 3
-                    for ℓ = 1:n-2
-                        if sptr[ℓ] == 2
-                            sptr[ℓ] = 0
-                            sptr[ℓ+1] += 1
+    sptr = zeros(Int, n - 1, 1)
+    for ss = 0:1 # keep the spin of variables x and y the same
+        for kx = 1:N # first variable x
+            for ky = 1:N # first variable y
+                @. sptr = 0
+                for s = 1:2^(n-1) #loop over spin variables
+                    # all other variables
+                    sp = sptr * N
+                    ukx = @view Ψtensor[kx+ss*N, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...]
+                    ukvecx = vec(ukx)
+                    uky = @view Ψtensor[ky+ss*N, ntuple(x -> sp[x]+1:sp[x]+N, n - 1)...]
+                    ukvecy = vec(uky)
+
+                    mat_gamma[kx, ky] += dot(ukvecx, mass, ukvecy)
+
+                    # adjust sptr
+                    sptr[1] += 1
+                    if n >= 3
+                        for ℓ = 1:n-2
+                            if sptr[ℓ] == 2
+                                sptr[ℓ] = 0
+                                sptr[ℓ+1] += 1
+                            end
                         end
-                    end
-                end # end if
+                    end # end if
+                end
             end
         end
     end
-    return 0.5*(mat_gamma+mat_gamma')
+    return 0.5 * (mat_gamma + mat_gamma') * n / length(p)
 end
 
 
 # compute the one-body reduced density matrix from coef
 # untested
 function one_body_DM(x::Float64, y::Float64, L::Float64, coef::Array{Float64,2})
- 
+    N = size(coef, 1)
+    h = (2.0 * L) / (N + 1)
+    j = floor(Int64, (x + L) / h)
+    ϕx_l = ((j + 1) * h - L - x) / h
+    ϕx_r = (x + L - j * h) / h
+
+    k = floor(Int64, (y + L) / h)
+    ϕy_l = ((k + 1) * h - L - y) / h
+    ϕy_r = (y + L - k * h) / h
+
+    val = 0.0
+    if 0 < j < N + 1
+        if 0 < k < N + 1
+            val += ϕx_l * ϕy_l * coef[j,k]
+        end
+        if k < N
+            val += ϕx_l * ϕy_r * coef[j,k+1]
+        end
+    end
+    if j < N 
+        if 0 < k < N + 1
+            val += ϕx_r * ϕy_l * coef[j+1,k]
+        end
+        if k < N
+            val += ϕx_r * ϕy_r * coef[j+1,k+1]
+        end
+    end
+
+    return val
+end
+
+function one_body_DM(xs::Vector{T}, ys::Vector{T}, L::T, coef::Array{T,2}) where {T<:Float64}
+    mat = zeros(T, length(xs), length(ys))
+    for (i, x) in enumerate(xs)
+        for (j, y) in enumerate(ys)
+            mat[i, j] = one_body_DM(x, y, L, coef)
+        end
+    end
+    return mat
 end
 
 # compute the coefficients for pair pair_density_spin
@@ -335,16 +364,16 @@ function pair_density_spin_coef(n::Int64, Ψ::Array{Float64,1}, C::SparseMatrixC
             for s = 1:2^(n-2)
                 sp = sptr * N
                 u = getindex(Ψtensor, j, k, ntuple(x -> sp[x]+1:sp[x]+N, n - 2)...)
-                uvec = reshape(u, N^(n - 2), 1)[:]
+                uvec = vec(u)
                 coef[jp+1, kp+1] += dot(uvec, mass, uvec)
                 if jp < N
                     u_xr = getindex(Ψtensor, j + 1, k, ntuple(x -> sp[x]+1:sp[x]+N, n - 2)...)
-                    uvec_xr = reshape(u_xr, N^(n - 2), 1)[:]
+                    uvec_xr = vec(u_xr)
                     coef[N+2+jp+1, kp+1] += dot(uvec_xr, mass, uvec)
                 end
                 if kp < N
                     u_yr = getindex(Ψtensor, j, k + 1, ntuple(x -> sp[x]+1:sp[x]+N, n - 2)...)
-                    uvec_yr = reshape(u_yr, N^(n - 2), 1)[:]
+                    uvec_yr = vec(u_yr)
                     coef[jp+1, N+2+kp+1] += dot(uvec_yr, mass, uvec)
                 end
                 if jp < N && kp < N
