@@ -1,19 +1,101 @@
 #-------------------------------------------------------------------------------
 # Solving Schrödinger Equation with Hatree Fock Method Based on Finite Element Discretization
-# ignore v_ee
 # {ϕ_vs} v = 1,...,N;s = 0,1
 # Ψ = |φ_1,0 ...φ_[ne/2],0 φ1,1...φ_ne-[ne/2],1>
 # φ_ks = Σ_(v=1...N)u_v,ks * ϕ_vs
-# Â*φi = ϵi*φi -> A*Ui = ϵi*C*Ui
+# H*φi = ϵi*φi -> H*Ui = ϵi*M*Ui
 #-------------------------------------------------------------------------------
-# PARAMETERS
-# ne: number of electrons/particles
-# A : 1-body operator, e.g., -Δ, v_ext
-# C : overlap
-# RETURNS
-# c0 : the ground state energy without v_ee
-#-------------------------------------------------------------------------------
+
 export HF
+
+function genFock(AH, AF, ρ, B::Array{Float64,4})
+    @tensor AH[i, j] = B[i, a, j, b] * ρ[a, b]
+    @tensor AF[i, j] = B[a, b, i, j] * ρ[a, b]
+
+    @. AH = (AH + AH') / 2
+    @. AF = (AF + AF') / 2
+
+    return AH, AF
+end
+
+function genFock(AH, AF, ρ, B::SparseMatrixCSC{Float64,Int64})
+    colptr = B.colptr
+    rowval = B.rowval
+    N = size(AH,1)
+
+    jptr = colptr[2:end] - colptr[1:end-1]
+    count = 0
+    @. AH = 0.
+    @. AF = 0.
+    for j = 1:length(jptr) #loop for the nonzero elements of column
+        jtr = jptr[j]
+        if jtr > 0
+            jx = j % N == 0 ? N : j % N
+            jy = div(j - jx, N) + 1
+            for k = 1:jtr
+                i = rowval[count+k]
+                ix = i % N == 0 ? N : i % N
+                iy = div(i - ix, N) + 1
+
+                AH[ix, jx] += B[i, j] * ρ[iy, jy]
+                AF[ix, jx] += B[i, j] * ρ[ix, iy]
+            end
+            count += jtr
+        end
+    end
+           
+    @. AH = (AH + AH') / 2
+    @. AF = (AF + AF') / 2
+
+    AH, AF
+end
+
+function scfHF(ne::Int64, ham::Hamiltonian, Norb::Int64, 
+            max_iter::Int64, mixing::Float64, scf_tol::Float64)
+    # ===== solve linear problem to initialize ρ =====#
+    AΔ = ham.AΔ
+    AV = ham.AV
+    M = ham.C
+    Bee = ham.Bee
+    alpha_lap = ham.alpha_lap
+
+    N = M.n
+    AH = zeros(N, N)
+    AF = zeros(N, N)
+    H = zeros(N, N)
+
+    A = 0.5 .* alpha_lap .* AΔ + AV
+    λ, W = eigs(A, M; nev=Norb, which=:SR)
+    ρ1 = zeros(N, N)
+    @views for k = 1:Norb
+        ρ1 += 2.0 * W[:, k] * W[:, k]'
+    end
+    ρ = copy(ρ1)
+
+    # ===== start the SCF iterations =====#
+    err = 1.0
+    k1 = mixing
+    k2 = 1.0 - k1  # charge mixing parameter
+    for k = 1:max_iter
+        if err < scf_tol
+            break;
+        end
+        genFock(AH, AF, ρ, Bee)
+        @. H = A + AH - 0.5 * AF
+
+        λ, W = eigs(H, M; nev=Norb, which=:SR)
+        ρ2 = zeros(N, N)
+        @views for j = 1:Norb
+            ρ2 += 2.0 * W[:, j] * W[:, j]'
+        end
+        ρ = k1 .* ρ1 + k2 .* ρ2
+        err = norm(ρ2 - ρ1)
+        ρ1 = ρ
+        println(" step : $(k),  err : $(err)")
+    end
+
+    W
+end
 
 function HFtoFCI(ne::Int64, N::Int64, U::Array{Float64,2})
     ind = Int64[]
@@ -59,7 +141,81 @@ function HFtoFCI(ne::Int64, N::Int64, U::Array{Float64,2})
     return c0
 end
 
-function HF_hm(ne::Int64, U::Array{Float64,2}, ham::Hamiltonian)
+function HF_1B(ne::Int64, U::Array{Float64,2}, 
+               A::SparseMatrixCSC{Float64,Int64},
+               C::SparseMatrixCSC{Float64,Int64})
+    N = size(U, 1)
+    rowval = A.rowval
+    jptr = A.colptr[2:end] - A.colptr[1:end-1]
+    m1 = cld(ne, 2)
+    Af = zeros(Float64, m1, m1)
+    Cf = zeros(Float64, m1, m1)
+
+    for k = 1:m1, l = 1:m1
+        count = 0
+        for j = 1:length(jptr) #loop for the nonzero elements of column
+            jtr = jptr[j]
+            for jk = 1:jtr
+                i = rowval[count+jk]
+
+                Af[k, l] += U[i, k] * U[j, l] * A[i, j]
+                Cf[k, l] += U[i, k] * U[j, l] * C[i, j]
+            end
+            count += jtr
+        end
+    end
+
+    return Af, Cf
+end
+
+function HF_2B(ne::Int64, U::Array{Float64,2}, B::Array{Float64,4})
+    N = size(U, 1)
+    m1 = cld(ne, 2)
+    Bf = zeros(Float64, m1, m1, m1, m1)
+
+    for i1 = 1:m1, i2 = 1:m1, j1 = 1:m1, j2 = 1:m1
+        for k1 = 1:N, k2 = 1:N, l1 = 1:N, l2 = 1:N
+            Bf[i1, i2, j1, j2] += U[k1, i1] * U[k2, i2] * U[l1, j1] * U[l2, j2] * B[k1, k2, l1, l2]
+        end
+    end
+
+    return Bf
+end
+
+function HF_2B(ne::Int64, U::Array{Float64,2}, B::SparseMatrixCSC{Float64,Int64})
+    N = size(U, 1)
+    m1 = cld(ne, 2)
+    rowval = B.rowval
+    lptr = B.colptr[2:end] - B.colptr[1:end-1]
+    Bf = zeros(Float64, m1, m1, m1, m1)
+
+    for i1 = 1:m1, i2 = 1:m1, j1 = 1:m1, j2 = 1:m1
+        count = 0
+        for l = 1:length(lptr) #loop for the nonzero elements of column
+            ltr = lptr[l]
+            if ltr > 0
+                l1 = l % N == 0 ? N : l % N
+                l2 = div(l - l1, N) + 1
+                for li = 1:ltr
+                    k = rowval[count+li]
+                    k1 = k % N == 0 ? N : k % N
+                    k2 = div(k - k1, N) + 1
+
+                    Bf[i1, i2, j1, j2] += U[k1, i1] * U[k2, i2] * U[l1, j1] * U[l2, j2] * B[k, l]
+                end
+                count += ltr
+            end
+        end
+    end
+
+    return Bf
+end
+
+function energyHF(ne::Int64, U::Array{Float64,2}, ham::Hamiltonian)
+    A = 0.5 .* ham.alpha_lap .* ham.AΔ + ham.AV
+    C = ham.C
+    B = ham.Bee
+
     v = 1:ne
     p = collect(permutations(v))[:]
     ε = (-1) .^ [parity(p[i]) for i = 1:length(p)]
@@ -75,7 +231,8 @@ function HF_hm(ne::Int64, U::Array{Float64,2}, ham::Hamiltonian)
     tp = zeros(Int, ne)
     Cp = zeros(Float64, ne)
 
-    Af, Cf, Bf = HF_12B(ne, U, ham)
+    Af, Cf = HF_1B(ne, U, A, C)
+    Bf = HF_2B(ne, U, B)
 
     for k = 1:length(p)
         Av = 0.0
@@ -107,24 +264,21 @@ function HF_hm(ne::Int64, U::Array{Float64,2}, ham::Hamiltonian)
     return valH, valM
 end
 
-function HF(ne::Int64, ham::Hamiltonian; max_iter = 100)
-    N = ham.C.n
-
+function HF(ne::Int64, ham::Hamiltonian; Norb=cld(ne, 2), 
+            max_iter=100, mixing=0.8, scf_tol=1e-5)
     println("SCF time : ")
-    @time AH, e = HF_SCF(ne, ham; max_iter = max_iter)
-    m1 = cld(ne, 2)
-    m2 = ne - m1
-
-    Hf = 0.5 * ham.alpha_lap * ham.AΔ + ham.AV + AH
-    E, U = eigs(Hf, ham.C, nev=m1, which=:SR)
-    U = Real.(U)
+    @time U0 = scfHF(ne, ham, Norb, max_iter, mixing, scf_tol)
+    U = real.(U0)
+    @assert norm(U-U0) < 1e-8
 
     println("Turn into FCI time : ")
+    N = ham.C.n
     @time c0 = HFtoFCI(ne, N, U)
-    wfsp = WaveFunction_sp(ne, N, c0) 
+    wfsp = WaveFunction_sp(ne, N, c0)
 
     println("Compute energy time : ")
-    @time valH, valM = HF_hm(ne, U, ham) ./ (norm(c0))^2
+    @time valH, valM = energyHF(ne, U, ham)
+    println("Hartree-Fock energy : ", valH/valM)
 
     return wfsp, U, valH, valM
 end

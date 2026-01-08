@@ -32,14 +32,12 @@ include("Interpolate.jl")
 # 1d system
 include("1d/1_2body_matrices_1d.jl")
 include("1d/1_2body_2ndfem.jl")
-include("1d/HartreeFock_Initial_1d.jl")
 include("1d/Nbody_Matfree_Column_1d.jl")
 include("1d/Nbody_Matfree_Row_1d.jl")
 include("1d/SCE_Initial_1d.jl")
 
 # 2d system
 include("2d/1_2body_matrices_2d.jl")
-include("2d/HartreeFock_Initial_2d.jl")
 include("2d/Nbody_Matfree_Column_2d.jl")
 include("2d/Nbody_Matfree_Row_2d.jl")
 include("2d/SCE_Initial_2d.jl")

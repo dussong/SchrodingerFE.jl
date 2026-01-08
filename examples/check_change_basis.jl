@@ -30,7 +30,7 @@ Hamglobal = hamiltonian(ne, ham)
 # @show Matrix(Hamglobal[1])
 # @show Matrix(Hamglobal[2])
 
-E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, "FCI_full"; maxiter=50, kdim=50)
+E_FCIfull, wf_FCIfull = WaveFunction(ne, ham, FCI_full(); maxiter=50, kdim=50)
 
 
 # Orthonormalize the basis
@@ -65,9 +65,9 @@ Hamglobal_on = hamiltonian(ne, ham_on)
 # @show Matrix(Hamglobal_on[1])
 # @show Matrix(Hamglobal_on[2])
 
-E_FCIfull2, wf_FCIfull2 = WaveFunction(ne, ham_on, "FCI_full"; maxiter=50, kdim=50)
+E_FCIfull2, wf_FCIfull2 = WaveFunction(ne, ham_on, FCI_full(); maxiter=50, kdim=50)
 
 @show (E_FCIfull2 - E_FCIfull)
 
-E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham_on, "FCI_sparse"; maxiter=50, kdim=60)
+E_FCIsparse, wf_FCIsparse = WaveFunction(ne, ham_on, FCI_sparse(); maxiter=50, kdim=60)
 @show (E_FCIsparse - E_FCIfull)
